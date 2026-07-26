@@ -3,10 +3,10 @@ export async function main(ns) {
   const repo = "xLinorx/github-project";
   const rawArg = ns.args[0] && ns.args[0].toString().trim().toLowerCase();
   const validBranches = ["dev", "devr", "main"];
-  const branch = validBranches.includes(rawArg) ? rawArg : "dev";
+  const branch = validBranches.includes(rawArg) ? rawArg : "main";
 
   if (rawArg && rawArg !== branch) {
-    ns.tprint(`Branch "${rawArg}" wird nicht unterstützt. Verwende stattdessen "dev".`);
+    ns.tprint(`Branch "${rawArg}" wird nicht unterstützt. Verwende stattdessen "main".`);
   }
 
   const baseUrl = `https://raw.githubusercontent.com/${repo}/${branch}/`;

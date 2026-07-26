@@ -1,5 +1,5 @@
-import { log } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/logger.js";
-import { getGameProfile } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/profile.js";
+import { log } from "/lib/logger.js";
+import { getGameProfile } from "/lib/profile.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
@@ -84,8 +84,8 @@ export async function main(ns) {
         let solvedCount = 0;
         let failedCount = 0;
         try {
-            if (ns.fileExists("D:/Development/Bitburner/AUTOMATION/AUTOMATION/data/contract-stats.json", "home")) {
-                let stats = JSON.parse(ns.read("D:/Development/Bitburner/AUTOMATION/AUTOMATION/data/contract-stats.json"));
+            if (ns.fileExists("/data/contract-stats.json", "home")) {
+                let stats = JSON.parse(ns.read("/data/contract-stats.json"));
                 solvedCount = stats.solved || 0;
                 failedCount = stats.failed || 0;
             }

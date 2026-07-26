@@ -1,11 +1,11 @@
-import { log } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/logger.js";
+import { log } from "/lib/logger.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
     ns.print("Nuke-Manager 2.0 aktiv. Scanne Netzwerk und verwalte NPC-Worker...");
 
-    const scripts = ["D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/hack.js", "D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/grow.js", "D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/weaken.js"];
+    const scripts = ["/batching/hack.js", "/batching/grow.js", "/batching/weaken.js"];
 
     while (true) {
         // 1. Netzwerk scannen
@@ -61,7 +61,7 @@ export async function main(ns) {
                 if (freeRam < 4) continue;
 
                 // Prüfen ob Update nötig
-                if (!ns.isRunning("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/hack.js", node, bestTarget)) {
+                if (!ns.isRunning("/batching/hack.js", node, bestTarget)) {
                     ns.killall(node);
                     await ns.sleep(20);
 
@@ -74,9 +74,9 @@ export async function main(ns) {
                     let growThreads = Math.floor((freeRam * 0.70) / 1.75);
                     let weakenThreads = Math.floor((freeRam * 0.20) / 1.75);
 
-                    if (hackThreads > 0) ns.exec("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/hack.js", node, hackThreads, bestTarget);
-                    if (growThreads > 0) ns.exec("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/grow.js", node, growThreads, bestTarget);
-                    if (weakenThreads > 0) ns.exec("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/weaken.js", node, weakenThreads, bestTarget);
+                    if (hackThreads > 0) ns.exec("/batching/hack.js", node, hackThreads, bestTarget);
+                    if (growThreads > 0) ns.exec("/batching/grow.js", node, growThreads, bestTarget);
+                    if (weakenThreads > 0) ns.exec("/batching/weaken.js", node, weakenThreads, bestTarget);
                 }
             }
         }

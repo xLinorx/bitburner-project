@@ -1,4 +1,5 @@
 ---
+description: Änderungen am Dispatcher für Netzwerkscan, Root-Zugriff und Batch-Verteilung.
 layout:
   width: default
   title:
@@ -23,14 +24,28 @@ layout:
 
 ## 2026-07-26
 
-### Dispatcher: vollständige Netzwerk-Infiltration und Verteilung
+### Dispatcher: Netzwerkscan und Batch-Verteilung
 
-* Der Dispatcher scannt den erreichbaren Netzwerkgraphen vollständig ab.
-* Für jeden erreichbaren Server wird geprüft, ob Root-Rechte vorhanden sind. Wenn nicht, werden die verfügbaren Port-Programme genutzt und anschließend `ns.nuke(server)` ausgeführt, sofern die Voraussetzungen erfüllt sind.
-* Der beste Zielserver wird über den gesamten erreichbaren, infiltrierten Serverraum bestimmt.
-* Die Batch-Skripte werden auf allen infiltrierbaren Hosts verteilt, sofern ausreichend RAM vorhanden ist.
+Der Dispatcher erkennt erreichbare Server jetzt automatisch. Er versucht Root-Zugriff zu erhalten und nutzt geeignete Hosts für Batch-Skripte.
 
-### Relevanter Code im Dispatcher
+#### Verhalten
+
+* Der Dispatcher durchsucht den von `home` erreichbaren Netzwerkgraphen vollständig.
+* Für Hosts ohne Root-Zugriff nutzt er alle verfügbaren Port-Programme.
+* Bei ausreichend geöffneten Ports führt er `ns.nuke(server)` aus.
+* Die Zielauswahl berücksichtigt alle erreichbaren Server.
+* Batch-Skripte laufen nur auf Hosts mit Root-Zugriff und freiem RAM.
+* `home` wird bei der Host-Auswahl ausgeschlossen.
+
+#### Voraussetzungen
+
+* Port-Programme müssen auf `home` liegen.
+* Ein Server benötigt mindestens die geforderte Anzahl geöffneter Ports.
+* Die Batch-Verteilung benötigt ausreichenden freien RAM auf dem Host.
+
+### Implementierungsdetails
+
+#### Root-Zugriff erhalten
 
 ```js
 let reachableServers = getReachableServers(ns);
@@ -52,10 +67,18 @@ for (let server of reachableServers) {
 }
 ```
 
+Der Dispatcher überspringt `home` und bereits gerootete Server. Fehler beim Nuking eines Servers unterbrechen den Durchlauf nicht.
+
+#### Ziel und Hosts bestimmen
+
 ```js
 let target = getBestTarget(ns, reachableServers);
 let hostServers = reachableServers.filter(server => server !== "home" && ns.hasRootAccess(server));
 ```
+
+Die Zielauswahl verwendet die vollständige Liste erreichbarer Server. Die Host-Liste enthält nur gerootete Server außerhalb von `home`.
+
+#### Netzwerk durchsuchen
 
 ```js
 function getReachableServers(ns, startServer = "home") {
@@ -75,3 +98,5 @@ function getReachableServers(ns, startServer = "home") {
     return Array.from(visited);
 }
 ```
+
+Die Breitensuche besucht jeden Host höchstens einmal und gibt alle erreichbaren Server zurück.

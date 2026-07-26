@@ -1,98 +1,110 @@
-# AUTOMATION
+---
+description: >-
+  Modulares Bitburner-Automatisierungsframework für Endgame-Optimierung und
+  autonome Systemsteuerung.
+---
 
-Ein modulares Automatisierungsframework für Bitburner v3.0.x mit Fokus auf Endgame-Optimierung, Cloud-Server-Management, Aktienhandel und autonomer Systemsteuerung.
+# Automation
+
+Dieses Framework automatisiert Bitburner v3.0.x. Es optimiert Endgame-Abläufe, verwaltet Cloud-Server und handelt Aktien autonom.
 
 ## Übersicht
 
-Dieses Repository enthält ein eigenständiges Framework für Bitburner, das mehrere Subsysteme und Manager zur vollständigen Automatisierung des Spiels kombiniert. Dazu gehören Batch-Hacking, Cloud-Server-Steuerung, Aktienmarkt-Management, Kontrakt- und Corporation-Automatisierung sowie eine Live-Dashboard-Oberfläche.
+Das Repository bündelt spezialisierte Manager und Subsysteme. Sie automatisieren zentrale Spielabläufe in einer gemeinsamen Laufzeit.
 
-## Hauptfeatures
+Enthalten sind Batch-Hacking, Cloud-Server-Verwaltung und Aktienhandel. Das Framework automatisiert außerdem Contracts, Corporations und weitere Endgame-Systeme. Ein Dashboard zeigt Status und Kennzahlen live an.
 
-- Phasenorientiertes Ressourcenmanagement für Early-, Mid-, Late- und Endgame
-- Automatische Cloud-Server-Verwaltung und RAM-Skalierung
-- Hardware-optimierte HWGW-Batching-Engine für Hack/Grow/Weaken
-- Autonomer Aktienhandel mit 4S-Datenintegration
-- Vollständige Automatisierung von Corporation, Gang, Bladeburner, Hacknet, Darkweb und Stanek
-- Robuste Diagnose-, Logging- und Fehlerbehandlungsmechanismen
-- TUI-Dashboard für Spielstatus und Systemmetriken
+Einige Module benötigen Geld, Root-Zugriff oder freigeschaltete APIs. Sie stehen erst nach dem entsprechenden Spielfortschritt zur Verfügung.
+
+## Funktionen
+
+* Ressourcenmanagement für Early, Mid, Late und Endgame.
+* Cloud-Server-Verwaltung mit automatischer RAM-Skalierung.
+* HWGW-Batching für Hack, Grow und Weaken.
+* Aktienhandel mit optionalen 4S-Daten.
+* Manager für Corporation, Gang, Bladeburner, Hacknet, Darkweb und Stanek.
+* Diagnosen, Logging, Fehlerbehandlung und TUI-Dashboard.
+
+### Voraussetzungen
+
+* Verwende Bitburner `v3.0.1` oder neuer.
+* Stelle alle Projektdateien auf `home` bereit.
+* Der Dispatcher benötigt Root-Zugriff und freien RAM auf Zielhosts.
+* API- und kaufabhängige Funktionen starten erst nach ihrer Freischaltung.
 
 ## Projektstruktur
 
-- `boot.js` - Master-Boot-Skript, Startsequenz und Diagnose
-- `DOKU.txt` - Technische Projektdokumentation
-- `CHANGES.md` - Änderungsprotokoll
-- `NetscriptDefinitions.d.ts` - TypeScript-Definitionen für Bitburner
+### Dateien
 
-### Ordner
+* `boot.js` — Startskript und Diagnose
+* `DOKU.txt` — technische Dokumentation
+* `CHANGES.md` — Änderungsprotokoll
+* `NetscriptDefinitions.d.ts` — TypeScript-Definitionen für Bitburner
 
-- `batching/`
-  - `dispatcher.js`
-  - `hack.js`
-  - `grow.js`
-  - `weaken.js`
-- `lib/`
-  - `logger.js`
-  - `profile.js`
-- `managers/`
-  - `ascension-manager.js`
-  - `bladeburner-manager.js`
-  - `cloud-manager.js`
-  - `contract-solver.js`
-  - `corp-manager.js`
-  - `darkweb-manager.js`
-  - `favor-optimizer.js`
-  - `gang-manager.js`
-  - `hacknet-manager.js`
-  - `home-upgrade-manager.js`
-  - `nuke-manager.js`
-  - `staneks-optimizer.js`
-  - `task-manager.js`
-- `trading/`
-  - `stock-engine.js`
-- `ui/`
-  - `dashboard.js`
+### Verzeichnisse
+
+* `batching/` — `dispatcher.js`, `hack.js`, `grow.js`, `weaken.js`
+* `lib/` — `logger.js`, `profile.js`
+* `managers/` — Manager für Fortschritt, Infrastruktur und Endgame-Systeme
+* `trading/` — `stock-engine.js`
+* `ui/` — `dashboard.js`
 
 ## Installation
 
-1. Kopiere den Ordner in dein Bitburner `scripts`-Verzeichnis oder speichere ihn in dein Spieler-Repository.
-2. Stelle sicher, dass alle Quelldateien verfügbar sind.
-3. Starte das System mit dem Master-Bootskript.
+Folge der Anleitung [How to install and usage](./).
+
+1. Erstelle `install.js` in Bitburner.
+2. Führe `run install.js main` aus.
+3. Prüfe, ob `boot.js` auf `home` vorhanden ist.
 
 ## Nutzung
 
-Führe das Projekt in Bitburner mit dem folgenden Befehl aus:
+Starte das Framework auf `home`:
 
 ```bash
-run AUTOMATION/boot.js
+run boot.js
 ```
 
-Das Bootskript führt Diagnoseprüfungen aus, beendet alte Prozesse und startet alle Subsysteme automatisch.
+Das Skript führt Diagnosen aus und beendet alte Prozesse. Anschließend startet es alle Subsysteme.
 
-## Update aus GitHub
+{% hint style="warning" %}
+Der Start kann laufende Prozesse beeinflussen. Prüfe `boot.js`, bevor du es in einem bestehenden Spielstand ausführst.
+{% endhint %}
 
-Dieses Repository enthält ein Update-Skript `update.js`, das die ausführbaren Projektdateien direkt aus dem GitHub-Branch lädt.
+## Updates aus GitHub
 
-- `run update.js dev` lädt die Skripte aus dem `dev`-Branch.
-- `run update.js main` lädt die Skripte aus dem `main`-Branch.
-- Es werden nur die JavaScript-Dateien (`*.js`) geladen, keine Dokumente wie `DOKU.txt` oder `README.md`.
+`update.js` lädt ausführbare Projektdateien direkt aus einem GitHub-Branch.
 
-Beispiel:
+* `run update.js dev` lädt den Branch `dev`.
+* `run update.js main` lädt den Branch `main`.
+* Das Skript lädt nur JavaScript-Dateien.
+
+Beispiel für den `dev`-Branch:
 
 ```bash
 run update.js dev
 ```
 
-Wichtig:
+{% hint style="warning" %}
+Das Update-Skript verwendet `ns.wget()` mit `raw.githubusercontent.com`. Das Repository muss öffentlich sein.
+{% endhint %}
 
-- Das Bitburner-Update-Skript verwendet `ns.wget()` auf `raw.githubusercontent.com`.
-- Das GitHub-Repository muss öffentlich sein, damit Bitburner die Dateien direkt herunterladen kann.
+{% hint style="warning" %}
+Updates können lokale Änderungen an Projektdateien überschreiben. Sichere Anpassungen vor dem Update.
+{% endhint %}
+
+## Fehlerbehebung
+
+* **`boot.js` fehlt:** Führe `run update.js main` erneut aus.
+* **Ein Modul startet nicht:** Prüfe RAM, Root-Zugriff und benötigte APIs.
+* **Update schlägt fehl:** Prüfe Branch-Namen und Repository-Erreichbarkeit.
 
 ## Hinweise
 
-- `DOKU.txt` enthält ausführliche Systemdokumentation zu Architektur und Designprinzipien.
-- `CHANGES.md` dokumentiert neuere Änderungen und Verbesserungen.
-- Dieses Repository ist für Bitburner v3.0.1+ ausgelegt.
+* `DOKU.txt` beschreibt Architektur und Designprinzipien ausführlich.
+* `CHANGES.md` dokumentiert Änderungen und Verbesserungen.
+* Das Framework unterstützt Bitburner v3.0.1 und neuer.
 
 ## Lizenz
 
-Keine Lizenz angegeben. Verwende den Code nach eigenem Ermessen oder ergänze eine Lizenzdatei, falls erforderlich.
+Für dieses Repository ist keine Lizenz angegeben. Ergänze eine Lizenzdatei, wenn du Nutzungsrechte festlegen möchtest.

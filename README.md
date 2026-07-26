@@ -1,45 +1,85 @@
+---
+description: Install, update, and start the Bitburner automation framework.
+---
 
 # How to install and usage
 
 ## Installation
 
-***
+{% stepper %}
+{% step %}
+### Create the installer
 
-1. Open the file [install.js](https://github.com/xLinorx/bitburner-project/blob/main/install.js) and copy ALL the content of it
-2.  Go to bitburner and type&#x20;
+Open [install.js](https://github.com/xLinorx/bitburner-project/blob/main/install.js) and copy its complete contents.
 
-    ```
-    nano install.js
-    ```
-3. Delete the content and Paste the whole content of the [install.js](https://github.com/xLinorx/bitburner-project/blob/main/install.js) file.
-4.  Save the file and type in the Bitburner terminal
+In the Bitburner terminal, create the file:
 
-    ```
-    run install.js main
-    ```
-5.  Update the files with the command&#x20;
+```bash
+nano install.js
+```
 
-    ```
-    run update.js main
-    ```
+Replace the file contents with the copied installer, then save.
+{% endstep %}
+
+{% step %}
+### Download the framework
+
+Run the installer from the Bitburner terminal:
+
+```bash
+run install.js main
+```
+
+The installer downloads the project files from the `main` branch.
+{% endstep %}
+
+{% step %}
+### Verify the installation
+
+Confirm that `boot.js` exists on `home`. Then start the framework:
+
+```bash
+run boot.js
+```
+{% endstep %}
+{% endstepper %}
+
+{% hint style="warning" %}
+The repository must be public. The installer downloads files from GitHub.
+{% endhint %}
 
 ## Update the System
 
-***
+Update the project files from the `main` branch:
 
-1.  Run the command for updating the script files
+```bash
+run update.js main
+```
 
-    ```
-    run update.js main
-    ```
+Use the development branch only when needed:
+
+```bash
+run update.js dev
+```
+
+{% hint style="warning" %}
+Updates can overwrite local changes to project files. Save custom changes before updating.
+{% endhint %}
 
 ## Run the system
 
-***
+Start the framework from `home`:
 
-1.  To start the system, simply type&#x20;
+```bash
+run boot.js
+```
 
-    ```
-    run boot.js
-    ```
+{% hint style="warning" %}
+`boot.js` can stop running processes before starting its subsystems. Review it before first use.
+{% endhint %}
 
+## Troubleshooting
+
+* **`boot.js` is missing:** Run `run update.js main` again.
+* **The update fails:** Check the branch name and repository access.
+* **A subsystem does not start:** Check available RAM, Root access, and required APIs.

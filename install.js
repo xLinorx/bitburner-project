@@ -17,11 +17,6 @@ export async function main(ns) {
 
   ns.tprint(`Installing project files from ${repo}@${branch}...`);
 
-  ns.tprint(`Starting Systemupdate...`);
-  await ns.exec("update.js", "home", branch);
-
-  ns.tprint(`Update finished. Please check the logs for any errors. Type "run boot.js" to start the system.`);
-
   let success = 0;
   let failed = 0;
 
@@ -45,4 +40,7 @@ export async function main(ns) {
   if (failed > 0) {
     ns.tprint("Überprüfe die Branch- bzw. Dateipfade und führe den Befehl erneut aus.");
   }
+
+  ns.tprint(`Download finished. Please check the logs for any errors. Type "run update.js main" to start the update.`);
+
 }

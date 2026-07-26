@@ -4,9 +4,7 @@ import { getGameProfile } from "/lib/profile.js";
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    log(ns, "OPTIMIZED ALPHA-VELOCITY STOCK ENGINE v3.0.1 aktiv...", "SUCCESS");
-
-    const fee = 100000;
+    log(ns, "HIGH-IMPACT STOCK ENGINE aktiv (Waterfall / Diamond Hands)...", "SUCCESS");
 
     while (true) {
         await ns.stock.nextUpdate();
@@ -29,81 +27,89 @@ export async function main(ns) {
                 let maxShares = ns.stock.getMaxShares(sym);
                 let [shares, avgPrice] = ns.stock.getPosition(sym);
                 
-                // Momentum-Score: Gewichtung aus Trend-Abweichung und Volatilität
-                let momentumScore = Math.abs(forecast - 0.5) * volatility;
+                // Momentum-Score (nur positive Trends sind relevant)
+                let momentumScore = forecast > 0.5 ? (forecast - 0.5) * volatility : 0;
 
                 return { sym, forecast, volatility, askPrice, bidPrice, maxShares, shares, avgPrice, momentumScore };
             });
 
             // ==========================================
-            // PASS 1: INTELLIGENTER EXIT (Whip-Sawing Prevention)
+            // PASS 1: DIAMOND-HANDS VERKAUFSLOGIK
             // ==========================================
             for (let data of marketData) {
                 if (data.shares > 0) {
-                    let isTrendReversed = data.forecast < 0.50;
-                    let isStopLossTriggered = data.bidPrice < data.avgPrice * 0.94 && data.forecast < 0.52;
+                    let grossValue = data.shares * data.bidPrice;
+                    let purchaseCost = data.shares * data.avgPrice;
+                    
+                    // Harte Netto-Rechnung abzüglich BEIDER Fixgebühren (Kauf + Verkauf = 200.000)
+                    let netProfit = grossValue - purchaseCost - 200000; 
 
-                    // Verkauf nur, wenn der Trend tatsächlich kippt oder ein echter Stop-Loss greift
-                    if (isTrendReversed || isStopLossTriggered) {
+                    // 1. Notbremse / Trendbruch: Der Trend ist vorbei (< 0.52). Raus hier, egal was passiert.
+                    let trendDead = data.forecast < 0.52;
+                    
+                    // 2. Totes Kapital: Die Aktie bewegt sich null.
+                    let deadCapital = data.volatility < 0.003;
+                    
+                    // 3. Massive Gewinnmitnahme: Trend kühlt minimal ab (< 0.55), aber wir haben über 50 Mio Reingewinn.
+                    let massiveProfitTake = data.forecast < 0.55 && netProfit > 50000000;
+
+                    if (trendDead || deadCapital || massiveProfitTake) {
                         let soldPrice = ns.stock.sellStock(data.sym, data.shares);
                         if (soldPrice > 0) {
-                            let profit = (soldPrice - data.avgPrice) * data.shares;
-                            log(ns, `LIQUIDATION: ${data.sym} verkauft (Forecast: ${data.forecast.toFixed(3)}). P/L: ${ns.formatNumber(profit)}`, "INFO");
+                            let reason = trendDead ? "TREND-BRUCH" : (deadCapital ? "STAGNATION" : "GEWINNMITNAHME");
+                            log(ns, `HIGH-IMPACT EXIT [${reason}]: ${data.sym} liquidiert | Netto-Ergebnis: $${ns.format.number(netProfit)}`, "WARN");
                         }
                     }
                 }
             }
 
+            // Nach Verkäufen: Budget für den Wasserfall-Kauf aktualisieren
             myMoney = ns.getServerMoneyAvailable("home");
             availableForTrading = Math.max(0, myMoney - profile.safetyReserve);
-
-            if (availableForTrading <= fee) continue;
-
-            // Marktstatus nach Verkäufen aktualisieren
-            marketData = symbols.map(sym => {
-                let forecast = ns.stock.getForecast(sym);
-                let volatility = ns.stock.getVolatility(sym);
-                let askPrice = ns.stock.getAskPrice(sym);
-                let bidPrice = ns.stock.getBidPrice(sym);
-                let maxShares = ns.stock.getMaxShares(sym);
-                let [shares, avgPrice] = ns.stock.getPosition(sym);
-                let momentumScore = Math.abs(forecast - 0.5) * volatility;
-                return { sym, forecast, volatility, askPrice, bidPrice, maxShares, shares, avgPrice, momentumScore };
-            });
-
-            // ==========================================
-            // PASS 2: OPTIMIERTE KAUF-KASKADE
-            // ==========================================
-            // Entschärfte Filter: Erfasst auch solide mittlere Trends ab 55% Forecast und 0.5% Volatilität
-            let candidates = marketData
-                .filter(d => d.forecast >= 0.55 && d.volatility >= 0.005 && d.shares < d.maxShares)
-                .sort((a, b) => b.momentumScore - a.momentumScore);
-
             let remainingBudget = availableForTrading;
 
-            for (let best of candidates) {
-                if (remainingBudget <= fee) break;
+            // ==========================================
+            // PASS 2: WASSERFALL / SPILLOVER KAUFLOGIK
+            // ==========================================
+            // Wir kaufen nur, wenn das Startbudget relevant ist (> 10 Mio)
+            if (remainingBudget > 10000000) {
+                
+                // Alle Elite-Werte suchen, die noch Platz haben, sortiert nach bestem Score
+                let candidates = marketData
+                    .filter(d => d.forecast >= 0.60 && d.volatility >= 0.008 && d.shares < d.maxShares)
+                    .sort((a, b) => b.momentumScore - a.momentumScore);
 
-                let spaceLeft = best.maxShares - best.shares;
-                let maxAffordable = Math.floor((remainingBudget - fee) / best.askPrice);
-                let desiredShares = Math.min(spaceLeft, maxAffordable);
+                for (let best of candidates) {
+                    // Wenn während des Durchlaufs das Geld knapp wird (< 10 Mio), sofort abbrechen
+                    if (remainingBudget < 10000000) break;
 
-                if (desiredShares > 0) {
-                    let cost = best.askPrice * desiredShares + fee;
-                    if (myMoney > cost + profile.safetyReserve) {
-                        let purchasedShares = ns.stock.buyStock(best.sym, desiredShares);
-                        if (purchasedShares > 0) {
-                            log(ns, `ALPHA-KAUF: ${best.sym} (${ns.formatNumber(purchasedShares)} Sh) | Score: ${best.momentumScore.toFixed(5)} | Vol: ${(best.volatility*100).toFixed(2)}%`, "SUCCESS");
-                            
-                            myMoney = ns.getServerMoneyAvailable("home");
-                            remainingBudget = Math.max(0, myMoney - profile.safetyReserve);
+                    let spaceLeft = best.maxShares - best.shares;
+                    // Berücksichtigt die 100k Kaufgebühr
+                    let maxAffordable = Math.floor((remainingBudget - 100000) / best.askPrice);
+                    let desiredShares = Math.min(spaceLeft, maxAffordable);
+                    
+                    let investmentVolume = desiredShares * best.askPrice;
+
+                    // Letzter Schutz: Der einzelne Trade muss mindestens 10 Mio schwer sein
+                    if (desiredShares > 0 && investmentVolume > 10000000) {
+                        let cost = investmentVolume + 100000;
+                        if (myMoney > cost + profile.safetyReserve) {
+                            let purchasedShares = ns.stock.buyStock(best.sym, desiredShares);
+                            if (purchasedShares > 0) {
+                                ns.writePort(1, "PAUSE_BATCHING");
+                                log(ns, `WASSERFALL-KAUF: ${best.sym} | Volumen: $${ns.format.number(investmentVolume)} | Score: ${best.momentumScore.toFixed(4)}`, "SUCCESS");
+                                
+                                // Budget für den nächsten Schleifendurchlauf (die nächste Aktie) direkt abziehen
+                                remainingBudget -= cost;
+                                myMoney -= cost;
+                            }
                         }
                     }
                 }
             }
 
         } catch (e) {
-            log(ns, `Fehler in der Stock Engine: ${e.message}`, "ERROR");
+            // API-Fehler (z.B. im Early Game ohne TIX) lautlos abfangen
         }
     }
 }

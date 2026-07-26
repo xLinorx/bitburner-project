@@ -9,6 +9,14 @@ export async function main(ns) {
     const ramLimit = ns.cloud.getRamLimit();
     const serverLimit = ns.cloud.getServerLimit();
 
+    // Harte RAM-Limits je nach Spielphase, um unkontrolliertes Verbrennen zu stoppen
+    const CAPS = {
+        "EARLY": 256,       // 256 GB Max im Early Game
+        "MID": 1024,        // 1 TB Max im Mid Game
+        "LATE": 16384,      // 16 TB Max (Pre-Corp)
+        "ENDGAME": 1048576  // 1 PB (Uncapped)
+    };
+
     while (true) {
         let profile = getGameProfile(ns);
 
@@ -25,6 +33,9 @@ export async function main(ns) {
         // BUDGET-SPLITTING: Maximal 10% des Überschusses für Server-Upgrades nutzen
         let surplus = Math.max(0, myMoney - profile.safetyReserve);
         let spendableMoney = surplus * 0.10;
+
+        // Bestimme das erlaubte Maximum für die aktuelle Phase (Standard-Fallback 1TB)
+        let currentCap = CAPS[profile.phase] || 1024;
 
         // 1. Initialer Einkauf bis zum Limit (25 Server)
         if (currentServers.length < serverLimit) {
@@ -54,7 +65,9 @@ export async function main(ns) {
                 }
             }
 
-            if (smallestRam >= ramLimit) {
+            // NEU: Prüfung gegen das absolute Spielphasen-Cap ODER das Spiel-Limit
+            if (smallestRam >= currentCap || smallestRam >= ramLimit) {
+                // Wir haben das Limit der Phase erreicht. Wir schlafen länger und schonen das Budget.
                 await ns.sleep(60000);
                 continue;
             }

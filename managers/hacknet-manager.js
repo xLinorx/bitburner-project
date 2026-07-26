@@ -4,95 +4,88 @@ import { getGameProfile } from "/lib/profile.js";
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    log(ns, "Hacknet-Manager 2.0 (Phasen-optimiert) aktiv...", "INFO");
-
-    const maxNodes = 25; 
-    const maxLevel = 200;
-    const maxRam = 64;
-    const maxCores = 16;
+    ns.print("Hacknet-Manager aktiv. Überwache Wirtschaftlichkeit und Phasen...");
 
     while (true) {
         let profile = getGameProfile(ns);
-        let myMoney = ns.getServerMoneyAvailable("home");
 
-        // Harter Cut-Off: Im Late/Endgame sparen wir auf die Corp. Hacknet kostet hier nur sinnlos Geld.
-        if (profile.phase === "ENDGAME" || profile.phase === "LATE") {
-            await ns.sleep(60000);
+        // 1. Priority-Lock: Wenn die Börse aktiv handelt, hat sie absoluten Vorrang
+        if (ns.peek(2) === "STOCK_ACTIVE") {
+            await ns.sleep(3000);
             continue;
         }
 
-        // Zentralisiertes Budget-Management aus der profile.js
-        let spendableMoney = myMoney - profile.safetyReserve;
+        // 2. Standby-Modus in LATE / ENDGAME: Kein sinnloses Kapitalverbrennen vor/während der Corp-Gründung
+        if (profile.phase === "LATE" || profile.phase === "ENDGAME") {
+            await ns.sleep(30000);
+            continue;
+        }
 
-        // Sicherheitsnetz: Nichts kaufen, wenn wir unterhalb der globalen Reserve sind
+        let myMoney = ns.getServerMoneyAvailable("home");
+        
+        // BUDGET-SPLITTING: Nutzt maximal 10% des Überschusses über der Sicherheitsreserve
+        let surplus = Math.max(0, myMoney - profile.safetyReserve);
+        let spendableMoney = surplus * 0.10;
+
         if (spendableMoney <= 0) {
             await ns.sleep(5000);
             continue;
         }
 
-        let bestUpgrade = null;
-        let bestROI = 0;
+        let numNodes = ns.hacknet.numNodes();
+        let maxNodes = ns.hacknet.maxNumNodes();
+        let boughtSomething = false;
 
-        // Evaluierung: Neuer Node
-        if (ns.hacknet.numNodes() < maxNodes) {
-            let cost = ns.hacknet.getPurchaseNodeCost();
-            let roi = 1.5 / cost;
-            if (roi > bestROI && spendableMoney > cost) {
-                bestROI = roi;
-                bestUpgrade = { type: 'new' };
+        // 3. Kontrollierter Zukauf von Nodes (limitiert auf max 16 Nodes, um Kosten-Explosion zu stoppen)
+        let purchaseCost = ns.hacknet.getPurchaseNodeCost();
+        if (numNodes < maxNodes && numNodes < 16 && spendableMoney >= purchaseCost) {
+            let res = ns.hacknet.purchaseNode();
+            if (res !== -1) {
+                ns.print(`[+] Neue Hacknet-Node #${res} gekauft.`);
+                boughtSomething = true;
             }
         }
 
-        // Evaluierung: Bestehende Nodes upgraden
-        for (let i = 0; i < ns.hacknet.numNodes(); i++) {
+        // 4. Ausbalancierte Upgrades mit harten Obergrenzen (Level 150, 64GB RAM, 8 Cores)
+        for (let i = 0; i < numNodes; i++) {
+            myMoney = ns.getServerMoneyAvailable("home");
+            surplus = Math.max(0, myMoney - profile.safetyReserve);
+            spendableMoney = surplus * 0.10;
+
             let stats = ns.hacknet.getNodeStats(i);
-            
-            if (stats.level < maxLevel) {
-                let cost = ns.hacknet.getLevelUpgradeCost(i, 1);
-                let gain = (stats.production / stats.level) * 1;
-                let roi = gain / cost;
-                if (roi > bestROI && spendableMoney > cost) {
-                    bestROI = roi;
-                    bestUpgrade = { type: 'level', node: i };
+
+            // Level Upgrade (Stoppt bei 150, da danach das ROI extrem einbricht)
+            let lvlCost = ns.hacknet.getLevelUpgradeCost(i, 1);
+            if (stats.level < 150 && spendableMoney >= lvlCost) {
+                if (ns.hacknet.upgradeLevel(i, 1)) {
+                    boughtSomething = true;
+                    continue;
                 }
             }
-            
-            if (stats.ram < maxRam) {
-                let cost = ns.hacknet.getRamUpgradeCost(i, 1);
-                let gain = stats.production * 0.07;
-                let roi = gain / cost;
-                if (roi > bestROI && spendableMoney > cost) {
-                    bestROI = roi;
-                    bestUpgrade = { type: 'ram', node: i };
+
+            // RAM Upgrade (Stoppt bei 64GB)
+            let ramCost = ns.hacknet.getRamUpgradeCost(i, 1);
+            if (stats.ram < 64 && spendableMoney >= ramCost) {
+                if (ns.hacknet.upgradeRam(i, 1)) {
+                    boughtSomething = true;
+                    continue;
                 }
             }
-            
-            if (stats.cores < maxCores) {
-                let cost = ns.hacknet.getCoreUpgradeCost(i, 1);
-                let gain = stats.production * 0.14;
-                let roi = gain / cost;
-                if (roi > bestROI && spendableMoney > cost) {
-                    bestROI = roi;
-                    bestUpgrade = { type: 'core', node: i };
+
+            // Core Upgrade (Stoppt bei 8 Cores)
+            let coreCost = ns.hacknet.getCoreUpgradeCost(i, 1);
+            if (stats.cores < 8 && spendableMoney >= coreCost) {
+                if (ns.hacknet.upgradeCore(i, 1)) {
+                    boughtSomething = true;
+                    continue;
                 }
             }
         }
 
-        // Ausführung der rentabelsten Aktion
-        if (bestUpgrade !== null) {
-            if (bestUpgrade.type === 'new') {
-                ns.hacknet.purchaseNode();
-            } else if (bestUpgrade.type === 'level') {
-                ns.hacknet.upgradeLevel(bestUpgrade.node, 1);
-            } else if (bestUpgrade.type === 'ram') {
-                ns.hacknet.upgradeRam(bestUpgrade.node, 1);
-            } else if (bestUpgrade.type === 'core') {
-                ns.hacknet.upgradeCore(bestUpgrade.node, 1);
-            }
-            await ns.sleep(50);
+        if (!boughtSomething) {
+            await ns.sleep(5000);
         } else {
-            // Kein sinnvolles Upgrade gefunden oder alles gemaxt
-            await ns.sleep(2000);
+            await ns.sleep(1000);
         }
     }
 }

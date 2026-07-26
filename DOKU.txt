@@ -1,72 +1,74 @@
 ================================================================================
            PROJEKT 2.0: AUTOMATION — TECHNISCHE SYSTEMDOKUMENTATION
 ================================================================================
-Stand: Bitburner v3.0.1+ (Endgame-Optimiert, Phasen-gesteuert & API-v3-Kompatibel)
+Stand: Bitburner v3.0.1+ (Endgame-Optimiert, Phasen-gesteuert & Hybrid-IPC)
 Autor / Systemadministrator: René Klünder / Autonomes Core-System
 
 --------------------------------------------------------------------------------
 1. SYSTEMÜBERSICHT & DESIGN-PARADIGMEN
 --------------------------------------------------------------------------------
 Projekt 2.0 ist eine modulare, autarke und ausfallsichere Automatisierungsarchitektur 
-für Bitburner v3.0.x[cite: 2]. Sie bricht mit klassischen, verschachtelten Skript-Strukturen und 
-setzt auf strikte Funktionstrennung, deterministisches Ressourcenmanagement und 
-Echtzeit-Kommunikation zwischen den Subsystemen[cite: 2].
+für Bitburner v3.0.x. Sie setzt auf strikte Funktionstrennung, deterministisches 
+Ressourcenmanagement, mathematisch abgesicherte Investitionen und Echtzeit-
+Kommunikation zwischen den Subsystemen via Bitburner-Ports[cite: 2].
 
 Zentrale v3.0.1 Design-Prinzipien:
 - Namespace-Standards (v3.0.1): Server-Verwaltung läuft über den `ns.cloud`-Namespace, 
-  Benutzeroberflächen und Tails über `ns.ui`, und Zahlenformatierungen nutzen einheitlich `ns.format.number()`.
-- Ressourcen-Isolation: Cloud-Server (pservs) sind strikt vom NPC-Netzwerk und 
-  dem Home-Server getrennt[cite: 2]. Keine Prozessüberschneidungen.
-- Phasen-basiertes Budget-Management (`profile.js`): Dynamische Liquiditätsreserven 
-  und adaptive Sparmodi (z. B. 160b-Sperre im Late-Game) verhindern gegenseitige Blockaden 
-  zwischen Aktienmarkt und Corporation-Gründung[cite: 1, 2].
-- Inter-Process Communication (IPC) & Deadlock-Immunität: Bitburner-Ports (Port 1) 
-  werden vom Dispatcher stumm geleert (`while`-Schleife), um Datenstaus zu verhindern, 
-  während finanzielle Pausen-Signale ignoriert werden, um den Batcher unter Volllast zu halten[cite: 2].
-- Persistentes Logging: Alle Subsysteme schreiben strukturierte Events über ein 
-  zentrales Logger-Modul in ihre Konsolen-Tails[cite: 2].
-- Graceful Degradation & Diagnose: Endgame-APIs (Singularity, Bladeburner, Gang, 
-  Corp, Stanek) sind mit Try-Catch-Blöcken abgesichert[cite: 2]. Der Master-Boot führt beim Start 
-  eine automatische System-Diagnose durch und meldet fehlende APIs oder Source-Files[cite: 1, 2].
+  Benutzeroberflächen über `ns.ui`, und Zahlenformatierungen nutzen `ns.format.number()`[cite: 2].
+- Globale Finanz-Doktrin & Reserve-Schutz: Alle einkaufenden Module teilen sich 
+  die Abhängigkeit `profile.js`. Die eiserne Reserve (`safetyReserve`) wird niemals 
+  angetastet. Freies Budget berechnet sich strikt: `surplus = myMoney - safetyReserve`.
+- Master-Lock (Port 2 IPC): Die `stock-engine.js` steuert als Haupt-Renditebringer 
+  andere Einkäufer[cite: 2]. Bei aktiven Handlungsoptionen setzt sie den Lock `"STOCK_ACTIVE"`, 
+  welcher Infrastruktur-Käufe pausiert.
+- 10%-Budget-Splitting: Infrastruktur-Manager (`cloud` & `home`) dürfen pro Tick 
+  maximal 10 % des freien Überschusses ausgeben. 90 % bleiben der Börse vorbehalten.
+- Inter-Process Communication (IPC) & Deadlock-Immunität: Port 1 wird vom Dispatcher 
+  stumm geleert (`while`-Schleife), um Datenstaus zu verhindern, während der Batcher 
+  unter Volllast durchläuft[cite: 2].
+- Resource-Isolation ("home"-Schonung): Dein Heimserver ("home") wird von schwerem 
+  HWGW-Batching isoliert, um RAM für System-Skripte und Manager freizuhalten.
+- Graceful Degradation & Auto-Recovery: Try-Catch-Blöcke sichern Endgame-APIs ab[cite: 2]. 
+  Die Börsen-Engine wechselt ohne 4S-API automatisch in einen 40-Tick-Fallback-Modus.
 
 
 --------------------------------------------------------------------------------
 2. VOLLSTÄNDIGE VERZEICHNIS- UND MODULSTRUKTUR
 --------------------------------------------------------------------------------
-/AUTOMATION/
-├── boot.js                      # Master-Boot (Cleanup, Diagnose, Startsequenz)
-├── DOKU.txt                     # Diese technische Projektdokumentation
+/ (Root-Verzeichnis)
+├── boot.js                     # Master-Boot (Cleanup, Diagnose, Startsequenz)[cite: 2]
+├── DOKU.txt                    # Diese technische Projektdokumentation
 │
 ├── /lib/
-│   ├── logger.js                # Zentrales Logging (Konsole & Tail via ns.print)[cite: 2]
-│   └── profile.js               # Zentrales Phasen- & Budget-Modell (EARLY, MID, LATE, ENDGAME)[cite: 1]
+│   ├── logger.js               # Zentrales Logging (Konsole & Tail via ns.print)[cite: 2]
+│   └── profile.js              # Zentrales Phasen- & Budget-Modell (EARLY, MID, LATE, ENDGAME)[cite: 1]
 │
 ├── /ui/
-│   └── dashboard.js             # Live TUI-Dashboard (via ns.ui.openTail)[cite: 2]
+│   └── dashboard.js            # Live TUI-Dashboard (via ns.ui.openTail)[cite: 2]
 │
 ├── /trading/
-│   └── stock-engine.js          # Autonomer Aktienhändler mit 4S-API, IPC & flexibler Reserve[cite: 2]
+│   └── stock-engine.js         # Hybrid Stock Engine (Auto-Unlock, 40-Tick-History, Master-Lock)[cite: 2]
 │
 ├── /batching/
-│   ├── dispatcher.js            # HWGW-Micro-Batching-Engine (mit IPC-Deadlock-Fix & ns.cloud)[cite: 2]
-│   ├── hack.js                  # Payloads: Hack-Modul
-│   ├── grow.js                  # Payloads: Grow-Modul
-│   └── weaken.js                # Payloads: Weaken-Modul
+│   ├── dispatcher.js           # HWGW-Micro-Batching-Engine (Target-Scoring, "home"-Isolation)[cite: 2]
+│   ├── hack.js                 # Payloads: Hack-Modul
+│   ├── grow.js                 # Payloads: Grow-Modul
+│   └── weaken.js               # Payloads: Weaken-Modul
 │
 └── /managers/
-    ├── cloud-manager.js         # Kugelsichere pserv-Verwaltung & RAM-Skalierung (ns.cloud)[cite: 2]
-    ├── nuke-manager.js          # Autonomer NPC-Port-Opener & Root-Access-Manager[cite: 2]
-    ├── darkweb-manager.js       # Autonomer Tor- & Programm-Einkauf (mit Singularity-Abfrage)
-    ├── hacknet-manager.js       # Phasen-optimierter Hacknet-Manager mit automatischem Standby[cite: 2]
-    ├── contract-solver.js       # Universeller Solver für alle .cct-Dateitypen[cite: 2]
-    ├── corp-manager.js          # Corporation-Management (4000q-Turbo Edition: Agri, Tobacco, Dividenden)[cite: 2]
-    ├── gang-manager.js          # Gang-Recruiting & dynamische Task-Zuweisung
-    ├── ascension-manager.js     # Automatisierter Augmentation-Kauf & Fraktionen[cite: 2]
-    ├── bladeburner-manager.js   # Bladeburner-Automatik (Stamina, Ops, Black Ops)[cite: 2]
-    ├── staneks-optimizer.js     # Permanentes Laden von Stanek's Matrix[cite: 2]
-    ├── home-upgrade-manager.js  # Autonome Erhöhung von Home-RAM & CPU-Cores via Singularity[cite: 2]
-    ├── favor-optimizer.js       # Automatisierte Fraktions-Spenden ab 150 Favor[cite: 2]
-    └── task-manager.js          # Autonomer Spieler-Task-Manager mit try/catch-Absicherung für SF4
+    ├── cloud-manager.js        # pserv-Verwaltung (Port-2-Lock, 10%-Splitting, RAM-Verdopplung)[cite: 2]
+    ├── nuke-manager.js         # Autonomer NPC-Port-Opener & Root-Access-Manager[cite: 2]
+    ├── darkweb-manager.js      # Autonomer Tor- & Programm-Einkauf
+    ├── hacknet-manager.js      # Phasen-optimierter Hacknet-Manager mit LATE/ENDGAME-Standby[cite: 2]
+    ├── contract-solver.js      # Universeller Solver für alle .cct-Dateitypen[cite: 2]
+    ├── corp-manager.js         # Corporation-Management (4000q-Turbo, Agri, Tobacco, Dividenden)[cite: 2]
+    ├── gang-manager.js         # Gang-Recruiting & dynamische Task-Zuweisung
+    ├── ascension-manager.js    # Automatisierter Augmentation-Kauf & Fraktionen[cite: 2]
+    ├── bladeburner-manager.js  # Bladeburner-Automatik (Stamina, Ops, Black Ops)[cite: 2]
+    ├── staneks-optimizer.js    # Permanentes Laden von Stanek's Matrix[cite: 2]
+    ├── home-upgrade-manager.js # Autonome Erhöhung von Home-RAM & CPU-Cores (Port-2-Lock & 10%)[cite: 2]
+    ├── favor-optimizer.js      # Automatisierte Fraktions-Spenden ab 150 Favor[cite: 2]
+    └── task-manager.js         # Spieler-Task-Manager mit try/catch-SF4-Sicherheitscheck
 
 
 --------------------------------------------------------------------------------
@@ -74,76 +76,92 @@ Zentrale v3.0.1 Design-Prinzipien:
 --------------------------------------------------------------------------------
 
 3.1 boot.js (Master-Boot & System-Diagnose)[cite: 2]
-- Funktion: Initialisiert das gesamte System, bereinigt den Home-Server und führt 
-  eine Umgebungsanalyse durch[cite: 2].
-- Diagnose: Überprüft beim Start aktiv den Verfügbarkeitsstatus von 4S-Marktdaten, 
-  Singularity-APIs, Bladeburner und Stanek und gibt bei fehlenden Source-Files 
-  Hinweise im Terminal aus[cite: 1, 2].
-- Startsequenz: Killt Altprozesse und startet alle Subsysteme in getakteten Intervallen[cite: 1, 2].
+- Funktion: Bereinigt den Heimserver von Altprozessen und startet alle 16 Module[cite: 1, 2].
+- Diagnose: Führt beim Start System-Checks für 4S-APIs, Singularity (SF4), Corporation (SF3), 
+  Bladeburner und Stanek durch[cite: 1, 2].
 
 3.2 /lib/profile.js (Zentrales Phasen- & Budget-Modell)[cite: 1]
-- Funktion: Steuert die globale Spielphase (`EARLY`, `MID`, `LATE`, `ENDGAME`) basierend auf Geld, RAM und Hacking-Level[cite: 1].
-- Sicherheitsreserve (`safetyReserve`): 
-  - EARLY: `0` (volles Investment in Infrastruktur)[cite: 1].
-  - MID: `50e6` (50 Mio. Puffer)[cite: 1].
-  - LATE (Pre-Corp ab 50b): `160e9` (160 Mrd. Sparpuffer, stoppt das Verprassen von Kapital im Aktienmarkt, um die 150b für die Corporation-Gründung zu sichern)[cite: 1].
-  - ENDGAME: `20e9` oder 15% des Vermögens[cite: 1].
+- Steuert die globale Spielphase (`EARLY`, `MID`, `LATE`, `ENDGAME`)[cite: 1].
+- Sicherheitsreserve (`safetyReserve`):
+  - EARLY: $0 (volles Investment in Infrastruktur)[cite: 1].
+  - MID: $50e6 ($50 Mio. Puffer)[cite: 1].
+  - LATE (Pre-Corp ab $50b): $160e9 ($160 Mrd. Sparpuffer zur Absicherung der Corp-Gründung)[cite: 1].
+  - ENDGAME: $20e9 oder 15% des Gesamtvermögens[cite: 1].
 
-3.3 /lib/logger.js[cite: 2]
-- Funktion: Zentralisiertes Logging für das gesamte Imperium[cite: 2].
-- Logik: Jedes Modul importiert die `log(ns, message, level)`-Funktion für formatierte Konsolentails[cite: 2].
+3.3 /trading/stock-engine.js (Hybrid-Börsen-Engine)[cite: 2]
+- Auto-Unlocker: Erwirbt automatisch fehlende Börsen-APIs, sobald das Budget oberhalb 
+  der Reserve reicht:
+  1. WSE Account ($200 Mio.)
+  2. TIX API ($5 Mrd.)
+  3. 4S Market Data ($1 Mrd.)
+  4. 4S TIX API ($25 Mrd.)
+- Hybrid-Analyse: Besitzt du noch keine 4S-TIX-API, speichert das Skript die Kurse der 
+  letzten 40 Ticks (~4 Min.) und berechnet Prognosen (`forecast`) und Volatilität selbst. 
+  Bei vorhandener 4S-API schaltet das Skript nahtlos auf die Präzisions-API um.
+- Diamond Hands Exit-Pass: Errechnet bei jeder Position den Reingewinn abzüglich beider 
+  Fixgebühren: `netProfit = (shares * bidPrice) - (shares * avgPrice) - 200.000`. 
+  Verkauft nur bei Trendbruch (`forecast < 0.52`), Stagnation (`volatility < 0.002`) oder 
+  Gewinnmitnahme (`netProfit > $50M` bei `forecast < 0.55`).
+- Wasserfall-Kauf-Pass (Spillover): Sortiert kaufwürdige Aktien (`forecast >= 0.60`, 
+  `volatility >= 0.005`) nach ihrem Momentum-Score. Kauf-Order setzt mindestens $10 Mio. 
+  Volumen voraus (Gebührenschutz). Kauflimit der #1 Aktie wird vollgepumpt; überschüssiges 
+  Geld fließt im selben Tick direkt in #2, #3 usw.
+- Master-Lock Signal: Schreibt bei aktiven Kaufchancen `"STOCK_ACTIVE"` auf Port 2.
 
-3.4 /ui/dashboard.js[cite: 2]
-- Funktion: Visuelles Kontrollzentrum via `ns.ui.openTail()`[cite: 2].
-- Logik: Zeigt Nettovermögen, Hacking-Level, aktive Cloud-Server und Systemstatus in Echtzeit[cite: 2].
+3.4 /managers/cloud-manager.js (pserv-Verwaltung)[cite: 2]
+- Verkauft und kauft 25 P-Server neu, um RAM kontinuierlich zu verdoppeln (8 GB bis Max-RAM)[cite: 3].
+- Prüft `ns.peek(2)`: Ist der `"STOCK_ACTIVE"` Lock gesetzt, pausiert der Manager[cite: 3].
+- Budget-Splitting: Nutzt pro Upgrade-Zyklus maximal `(myMoney - safetyReserve) * 0.10`[cite: 3].
 
-3.5 /trading/stock-engine.js[cite: 2]
-- Funktion: Vollautomatisierter Handel an der World Stock Exchange (WSE)[cite: 2].
-- Logik: Nutzt die 4S-TIX-API (`has4SDataTixApi`). Überwacht Kurs-Forecasts[cite: 2].
-- IPC-Integration: Setzt Signale auf Port 1[cite: 2].
+3.5 /managers/home-upgrade-manager.js (Home-Upgrades)[cite: 2]
+- Steuert den Ausbau von Home-RAM und CPU-Cores via Singularity API[cite: 4].
+- Prüft `ns.peek(2)` auf Börsen-Vorrang[cite: 4].
+- Budget-Splitting: Beschränkt Investitionen strikt auf 10 % des freien Überschusses[cite: 4].
 
 3.6 /batching/dispatcher.js (HWGW-Engine & Deadlock-Fix)[cite: 2]
-- Funktion: Das mathematische Herzstück der Hacking-Infrastruktur[cite: 2].
-- Logik: Berechnet Millisekunden-Timings für Hack, Weaken, Grow und Weaken (HWGW) und verteilt Payloads auf Cloud-Server über `ns.cloud`[cite: 2].
-- Deadlock-Schutz: Leert den IPC-Port stumm über eine `while`-Schleife, ignoriert finanzielle Pausen-Signale vollständig und arbeitet unterbrechungsfrei unter Volllast[cite: 2].
+- Zielauswahl-Score: Durchsucht das Netz und wählt das Ziel mit der Formel 
+  `Score = maxMoney / Math.max(minSecurity, 1)`.
+- HWGW Micro-Batching: Verteilt `hack.js`, `weaken.js` und `grow.js` Payloads auf gehackte 
+  NPC-Server und gekaufte P-Server[cite: 2, 6].
+- "home"-Isolation: Schließt "home" als ausführenden Host aus, um System-RAM zu schonen.
+- Deadlock-Schutz: Leert Port 1 in einer `while`-Schleife stumm und arbeitet ununterbrochen[cite: 2].
 
-3.7 /managers/hacknet-manager.js (Phasen-optimiert)[cite: 2]
-- Funktion: Hacknet-Node-Automatisierung mit ROI-Berechnung[cite: 2].
-- Standby-Logik: Schaltet sich in den Phasen `LATE` und `ENDGAME` automatisch in den Standby-Modus, um kein Kapital zu verbrennen, das für die Corporation benötigt wird[cite: 2].
+3.7 /managers/corp-manager.js (4000q-Turbo Edition)[cite: 2]
+- Gründet automatisch die Corporation ab 150b Guthaben[cite: 2].
+- Baut Agriculture (Fundament) & Tobacco (Rendite) auf[cite: 2].
+- Steuert Expansion, Smart Supply, Mitarbeiter-Rollen und Produkt-Verkaufszyklen (`v1`, `v2`)[cite: 2].
+- Schüttet ab $1T/Sek Gewinn 50% Dividende an den Spieler aus[cite: 2].
 
-3.8 /managers/corp-manager.js (4000q-Turbo Edition)[cite: 2]
-- Funktion: Corporation-Management für exponentielles Wachstum[cite: 2].
-- Logik: 
-  - Gründet automatisch die Corporation ab 150b[cite: 2].
-  - Baut die Sparten `Agriculture` (Fundament) und `Tobacco` (Turbo) auf[cite: 2].
-  - Steuert 6-Stadt-Expansion, Lagerhäuser, Smart Supply und automatische Mitarbeiter-Rollen[cite: 2].
-  - Lifecycle-Management für Produkte (`Tobacco-v1`, `v2`, etc.) mit automatischem Austauschen veralteter Produkte[cite: 2].
-  - Dividenden-Steuerung: Schüttet ab 1 Billion Gewinn/Sekunde 50% Dividende direkt auf das Spielerkonto aus, um die Zielmarke von 4000q zu erreichen[cite: 2].
-
-3.9 /managers/task-manager.js (SF4-Sicherheitsmodul)
-- Funktion: Autonome Charakter-Steuerung via Singularity API.
-- Absicherung: Führt beim Start einen `try/catch`-Validierungstest für Source-File 4 (SF4) durch. Bei fehlendem SF4 beendet sich das Skript fehlerfrei (Graceful Exit), wodurch störende rote Runtime-Errors im UI vermieden werden.
-
-3.10 Weitere Manager (Cloud, Nuke, Darkweb, Contracts, Gang, Ascension, Bladeburner, Stanek, Home-Upgrade, Favor)[cite: 2]
-- Arbeiten autonom nach festen Prioritätsregeln und try/catch-geschützten API-Abfragen[cite: 2].
+3.8 /managers/hacknet-manager.js (Phasen-optimiert)[cite: 2]
+- Schaltet sich in den Phasen `LATE` und `ENDGAME` automatisch ab, um Kapital für die Corporation zu sichern[cite: 2].
 
 
 --------------------------------------------------------------------------------
-4. BEDIENUNG UND START
+4. INTER-PROZESS-KOMMUNIKATION (IPC) & FINANZ-FLUSS
 --------------------------------------------------------------------------------
-Das gesamte Imperium wird nach einem Spiel-Neustart oder Reset mit einem 
-einzigen Terminal-Befehl hochgefahren[cite: 2]:
-
-    run AUTOMATION/boot.js
-
-
---------------------------------------------------------------------------------
-5. VERHALTEN BEI EINEM FRESH START / BITNODE-RESET
---------------------------------------------------------------------------------
-Wird das System in einer völlig neuen BitNode oder im Early-Game gestartet, 
-reagiert das Framework wie folgt[cite: 2]:
-- Automatische Start-Diagnose: Der `boot.js` listet im Terminal sofort auf, 
-  welche Features aufgrund fehlender Source-Files im Standby sind[cite: 1, 2].
-- Absturzsicherheit: Umfassende Try-Catch-Blöcke verhindern Laufzeitfehler[cite: 2].
-- Null-Puffer im Early-Game: Die `profile.js` setzt die Reserve auf `0`, damit jeder Cent sofort in den Aufbau, Hacknet und Darkweb-Programme fließen kann[cite: 1, 2].
-================================================================================
+```text
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                        FINANZ-DOKTRIN (profile.js)                     │
+  │                  surplus = myMoney - safetyReserve                     │
+  └───────────────────────────────────┬────────────────────────────────────┘
+                                      │
+     ┌────────────────────────────────┼────────────────────────────────┐
+     │                                │                                │
+     ▼                                ▼                                ▼
+┌──────────────────────────┐     ┌──────────────┐             ┌──────────────────┐
+│     stock-engine.js      │     │ Port 2 Lock  │             │   dispatcher.js  │
+├──────────────────────────┤     └──────┬───────┘             ├──────────────────┤
+│ - Auto-Unlock APIs       │            │                     │ - HWGW Batching  │
+│ - 40-Tick Fallback/4S    │            │ (Sperrt bei Trade)  │ - Max-Targeting  │
+│ - Netto-Profit (-200k)   │            ▼                     │ - "home"-Schonung│
+│ - Wasserfall-Kauf (>10M) ├───────►[STOCK_ACTIVE]            │ - Port 1 Cleanup │
+└──────────────────────────┘            │                     └──────────────────┘
+                                        │
+                      ┌─────────────────┴─────────────────┐
+                      ▼                                   ▼
+        ┌───────────────────────────┐       ┌───────────────────────────┐
+        │     cloud-manager.js      │       │  home-upgrade-manager.js  │
+        ├───────────────────────────┤       ├───────────────────────────┤
+        │ - Stoppt bei Port-2-Lock  │       │ - Stoppt bei Port-2-Lock  │
+        │ - Max 10% des Surplus     │       │ - Max 10% des Surplus     │
+        └───────────────────────────┘       └───────────────────────────┘

@@ -6,17 +6,13 @@ export async function main(ns) {
     ns.disableLog("ALL");
     ns.disableLog("getServerMoneyAvailable");
     ns.disableLog("sleep");
-    log(ns, "HWGW-Micro-Batching-Engine (v3.0.1 ns.cloud) gestartet. (Deadlock-Schutz aktiv)", "INFO");
+    log(ns, "HWGW-Micro-Batching-Engine gestartet. (Deadlock-Schutz aktiv)", "INFO");
 
     while (true) {
         let profile = getGameProfile(ns);
 
-        // NEU: Operation Deadlock-Auflösung.
-        // Den Port stumm leeren, damit er nicht überläuft. 
-        // Wir ignorieren das Finanz-Signal ab sofort komplett und arbeiten zu 100% weiter!
         while (ns.readPort(1) !== "NULL PORT DATA") {
-            // Die anderen Manager dürfen panisch "PAUSE_BATCHING" rufen, 
-            // aber der Dispatcher ignoriert es und pumpt weiter Geld ins System.
+            // Port-Daten bereinigen
         }
 
         let reachableServers = getReachableServers(ns);

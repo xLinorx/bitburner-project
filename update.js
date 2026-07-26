@@ -64,4 +64,8 @@ export async function main(ns) {
   if (failed > 0) {
     ns.tprint("Überprüfe die Branch- bzw. Dateipfade und führe den Befehl erneut aus.");
   }
+
+  ns.tprint("Starting boot.js to initialize the project...");
+  ns.run("boot.js");
+
 }

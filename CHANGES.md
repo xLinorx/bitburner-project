@@ -22,6 +22,78 @@ layout:
 
 # Änderungen
 
+## 2026-07-26 14:30 - HWGW-Engine Komplette Optimierung
+
+### Dispatcher: Maximierung des Geldflusses durch präzise Batch-Kalkulation
+
+Der Dispatcher wurde vollständig optimiert für maximalen Geldfluss mit garantierter 25% Hack-Quote pro Server-Zyklus.
+
+#### Hauptverbesserungen
+
+* **25% Hack-Quote garantiert**: Verwendet `ns.hackAnalyze()` für exakte Berechnung der Hack-Threads
+* **Optimale HWGW-Verhältnisse**: Thread-Verhältnisse werden dynamisch pro Target berechnet
+* **Intelligente Grow-Berechnung**: Basiert auf tatsächlichem Wachstumsbedarf via `ns.growthAnalyze()`
+* **Präzise Weaken-Threads**: Berechnet aus Security-Steigerung von Hack + Grow Operationen
+* **Keine Restart-Zyklen**: Batche folgen natürlichem HWGW-Rhythmus ohne unnötige Unterbrechungen
+* **RAM-Budgetierung**: `calculateRamPerBatch()` berechnet exakten RAM-Bedarf pro Batch
+* **Stabile Server**: Alle Worker-Server halten maximale Geldmengen
+* **Multi-Target-Verteilung**: Top 10 Targets werden parallel mit Round-Robin-Verteilung angegriffen
+
+#### Batch-Berechnungslogik
+
+```js
+// Für jeden Target werden folgende Werte berechnet:
+Hack-Threads = CEIL(25% / hackAnalyze(target))
+Grow-Multiplier = 1 / (1 - 0.25) = 1.33
+Grow-Threads = CEIL(growthAnalyze(target, 1.33))
+Security-Anstieg = (Hack-Threads * 0.002) + (Grow-Threads * 0.004)
+Weaken-Threads = CEIL(Security-Anstieg / 0.05)
+```
+
+#### Zyklus-Ablauf
+
+1. Top 10 profitabelste Targets identifizieren (alle 10 Sekunden)
+2. Für jeden Target: HWGW-Batch-Requirements berechnen
+3. RAM-Budgets pro Server berechnen
+4. Worker round-robin auf Targets verteilen
+5. Batch-Sequenzen mit präzisen Delays ausführen
+6. Schlaf bis nächster natürlicher Zyklus (Weaken-Zeit)
+
+#### Performance-Metriken
+
+* **Durchsatz**: Kontinuierlich 25% vom maximalen Server-Geld pro Zyklus
+* **Sicherheit**: Alle Server bleiben auf Min-Security (Weaken ist Teil des HWGW)
+* **Stabilität**: Volle Geldmengen während kontinuierlichen Hackers
+* **RAM-Effizienz**: Keine verschwendeten Threads durch ungenaue Berechnungen
+
+#### Timing-Optimierung
+
+* Sleep-Zeit ist `MAX(Weaken-Zeiten aller Targets) + 500ms`
+* Verhindert Overloading durch zu schnelle Batch-Starts
+* Sorgt für konsistente, messbare Geldflussrate
+
+#### Konfigurierbare Parameter
+
+```js
+const HACK_PERCENT = 0.25;           // 25% Hack-Quote
+const targetUpdateInterval = 10000;  // Re-Evaluierung alle 10 Sekunden
+const TOP_TARGETS = 10;              // Top 10 beste Targets gleichzeitig
+```
+
+#### Implementierungsdetails
+
+Neue Funktion `calculateRamPerBatch()`:
+- Summiert RAM-Kosten für alle HWGW-Skripte
+- Gibt sichere Obergrenze für RAM-Check zurück
+- Verhindert unvollständige Batch-Starts
+
+Optimierte Targeting:
+- `getBestTargets()` sortiert nach Score (maxMoney / minSec)
+- Dynamische Neupriorisierung bei neuen besten Targets
+- Kill-Funktion entfernt veraltete Skripte automatisch
+
+---
+
 ## 2026-07-26
 
 ### Dispatcher: Netzwerkscan und Batch-Verteilung

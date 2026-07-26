@@ -68,6 +68,25 @@ run AUTOMATION/boot.js
 
 Das Bootskript führt Diagnoseprüfungen aus, beendet alte Prozesse und startet alle Subsysteme automatisch.
 
+## Update aus GitHub
+
+Dieses Repository enthält ein Update-Skript `update.js`, das die ausführbaren Projektdateien direkt aus dem GitHub-Branch lädt.
+
+- `run update.js dev` lädt die Skripte aus dem `dev`-Branch.
+- `run update.js main` lädt die Skripte aus dem `main`-Branch.
+- Es werden nur die JavaScript-Dateien (`*.js`) geladen, keine Dokumente wie `DOKU.txt` oder `README.md`.
+
+Beispiel:
+
+```bash
+run update.js dev
+```
+
+Wichtig:
+
+- Das Bitburner-Update-Skript verwendet `ns.wget()` auf `raw.githubusercontent.com`.
+- Das GitHub-Repository muss öffentlich sein, damit Bitburner die Dateien direkt herunterladen kann.
+
 ## Hinweise
 
 - `DOKU.txt` enthält ausführliche Systemdokumentation zu Architektur und Designprinzipien.

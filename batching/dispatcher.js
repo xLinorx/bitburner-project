@@ -11,12 +11,9 @@ export async function main(ns) {
     while (true) {
         let profile = getGameProfile(ns);
 
-        // NEU: Operation Deadlock-Auflösung.
-        // Den Port stumm leeren, damit er nicht überläuft. 
-        // Wir ignorieren das Finanz-Signal ab sofort komplett und arbeiten zu 100% weiter!
+        // Den Port stumm leeren, damit er nicht überläuft.
         while (ns.readPort(1) !== "NULL PORT DATA") {
-            // Die anderen Manager dürfen panisch "PAUSE_BATCHING" rufen, 
-            // aber der Dispatcher ignoriert es und pumpt weiter Geld ins System.
+            // Port-Daten bereinigen
         }
 
         let reachableServers = getReachableServers(ns);

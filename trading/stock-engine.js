@@ -109,7 +109,7 @@ export async function main(ns) {
             }
 
         } catch (e) {
-            // API-Fehler (z.B. im Early Game ohne TIX) lautlos abfangen
+            // API-Fehler (z.B. im Early Game ohne TIX) lautlos abfangen 
         }
     }
 }

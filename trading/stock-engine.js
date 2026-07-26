@@ -4,10 +4,14 @@ import { getGameProfile } from "/lib/profile.js";
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    log(ns, "HYBRID STOCK ENGINE aktiv (Auto-Unlock & Priority-Lock)...", "SUCCESS");
+    log(ns, "HYBRID STOCK ENGINE aktiv (Mit Corp-Trigger & Two-Tier Budget)...", "SUCCESS");
 
     const priceHistory = {};
-    const HISTORY_LENGTH = 40; // Erhöht auf 40 Ticks (4 Minuten) für stabilere Fallback-Daten
+    const HISTORY_LENGTH = 40;
+
+    // Nur 100 Mio. echtes Bargeld auf der Bank lassen, der Rest muss an die Börse!
+    const TRADING_RESERVE = 100_000_000; 
+    const CORP_COST = 150_000_000_000;
 
     while (true) {
         await ns.stock.nextUpdate();
@@ -16,47 +20,65 @@ export async function main(ns) {
             let profile = getGameProfile(ns);
             let myMoney = ns.getServerMoneyAvailable("home");
             
-            // Das frei verfügbare Budget, das die Corporation-Sicherheit NICHT antastet
-            let spendableMoney = Math.max(0, myMoney - profile.safetyReserve);
+            // apiBudget: Für den KAUF VON APIs gilt weiterhin die eiserne Reserve, 
+            // damit wir nicht versehentlich das Corp-Geld für eine 25-Mrd-API verballern.
+            let apiBudget = Math.max(0, myMoney - profile.safetyReserve);
 
             // ==========================================
-            // 1. AUTO-UNLOCK DER BÖRSEN-APIs (Sicherheits-Bereinigt)
+            // 1. AUTO-UNLOCK DER BÖRSEN-APIs (Nutzt apiBudget)
             // ==========================================
-            // A. WSE Account (200 Mio)
-            if (!ns.stock.hasWSEAccount() && spendableMoney > 200_000_000) {
-                if (ns.stock.purchaseWseAccount()) {
-                    log(ns, "WSE Account erworben!", "SUCCESS");
-                }
+            if (!ns.stock.hasWSEAccount() && apiBudget > 200_000_000) {
+                if (ns.stock.purchaseWseAccount()) log(ns, "WSE Account erworben!", "SUCCESS");
             }
-            // B. TIX API (5 Mrd)
-            if (ns.stock.hasWSEAccount() && !ns.stock.hasTixApiAccess() && spendableMoney > 5_000_000_000) {
-                if (ns.stock.purchaseTixApi()) {
-                    log(ns, "TIX API erworben! Aktiviere Basis-Trading.", "SUCCESS");
-                }
+            if (ns.stock.hasWSEAccount() && !ns.stock.hasTixApiAccess() && apiBudget > 5_000_000_000) {
+                if (ns.stock.purchaseTixApi()) log(ns, "TIX API erworben! Aktiviere Basis-Trading.", "SUCCESS");
             }
-            // C. 4S Market Data (1 Mrd)
-            if (ns.stock.hasTixApiAccess() && !ns.stock.has4SData() && spendableMoney > 1_000_000_000) {
-                if (ns.stock.purchase4SMarketData()) {
-                    log(ns, "4S Market Data erworben!", "SUCCESS");
-                }
+            if (ns.stock.hasTixApiAccess() && !ns.stock.has4SData() && apiBudget > 1_000_000_000) {
+                if (ns.stock.purchase4SMarketData()) log(ns, "4S Market Data erworben!", "SUCCESS");
             }
-            // D. 4S TIX API (25 Mrd)
-            if (ns.stock.has4SData() && !ns.stock.has4SDataTixApi() && spendableMoney > 25_000_000_000) {
-                if (ns.stock.purchase4SMarketDataTixApi()) {
-                    log(ns, "4S TIX API erworben! Präzisions-Modus aktiv.", "SUCCESS");
-                }
+            if (ns.stock.has4SData() && !ns.stock.has4SDataTixApi() && apiBudget > 25_000_000_000) {
+                if (ns.stock.purchase4SMarketDataTixApi()) log(ns, "4S TIX API erworben! Präzisions-Modus aktiv.", "SUCCESS");
             }
 
-            // Schutz: Ohne WSE Account stürzt getSymbols() ab. Ohne TIX können wir nicht handeln.
-            if (!ns.stock.hasWSEAccount() || !ns.stock.hasTixApiAccess()) {
-                continue;
-            }
+            if (!ns.stock.hasWSEAccount() || !ns.stock.hasTixApiAccess()) continue;
 
             let symbols = ns.stock.getSymbols();
             let has4S = ns.stock.has4SDataTixApi();
 
             // ==========================================
-            // 2. MARKT-ANALYSE (Hybrid: 4S oder Fallback-Historie)
+            // 2. NET WORTH BERECHNUNG & CORP-TRIGGER
+            // ==========================================
+            let stockValue = 0;
+            for (let sym of symbols) {
+                let [shares] = ns.stock.getPosition(sym);
+                if (shares > 0) stockValue += shares * ns.stock.getBidPrice(sym);
+            }
+            let netWorth = myMoney + stockValue;
+
+            // Prüfen, ob wir das Corp-Geld brauchen (try-catch, falls SF3 fehlt)
+            let needsCorpFund = false;
+            try {
+                if (!ns.corporation.hasCorporation() && profile.phase === "LATE") {
+                    needsCorpFund = true;
+                }
+            } catch (e) {}
+
+            // MASSIVER SELL-OFF: Wir haben zusammen 150 Mrd., aber nicht genug Bargeld!
+            if (needsCorpFund && netWorth >= CORP_COST && myMoney < CORP_COST) {
+                ns.print(`[CORP-TRIGGER] Net Worth erreicht: $${ns.format.number(netWorth)}. Liquidere Depot!`);
+                for (let sym of symbols) {
+                    let [shares] = ns.stock.getPosition(sym);
+                    if (shares > 0) {
+                        ns.stock.sellStock(sym, shares);
+                        log(ns, `CORP-FUNDING LIQUIDATION: ${sym} verkauft.`, "WARN");
+                    }
+                }
+                // Nach dem Komplett-Verkauf stoppen wir diesen Tick, damit der corp-manager übernehmen kann
+                continue; 
+            }
+
+            // ==========================================
+            // 3. MARKT-ANALYSE
             // ==========================================
             let marketData = symbols.map(sym => {
                 let askPrice = ns.stock.getAskPrice(sym);
@@ -64,7 +86,6 @@ export async function main(ns) {
                 let maxShares = ns.stock.getMaxShares(sym);
                 let [shares, avgPrice] = ns.stock.getPosition(sym);
 
-                // Historie für Fallback füllen
                 if (!priceHistory[sym]) priceHistory[sym] = [];
                 priceHistory[sym].push(askPrice);
                 if (priceHistory[sym].length > HISTORY_LENGTH) priceHistory[sym].shift();
@@ -77,13 +98,12 @@ export async function main(ns) {
                     volatility = ns.stock.getVolatility(sym);
                 } else {
                     let history = priceHistory[sym];
-                    if (history.length >= 10) { // Mindestens 10 Ticks warten, bevor wir raten
+                    if (history.length >= 10) {
                         let increases = 0;
                         for (let i = 1; i < history.length; i++) {
                             if (history[i] > history[i - 1]) increases++;
                         }
                         forecast = increases / (history.length - 1);
-                        // Durchschnittliche Bewegung als Volatilitäts-Ersatz
                         volatility = Math.abs(history[history.length - 1] - history[0]) / history[0] / history.length;
                     }
                 }
@@ -93,7 +113,7 @@ export async function main(ns) {
             });
 
             // ==========================================
-            // PASS 1: DIAMOND-HANDS VERKAUFSLOGIK
+            // 4. DIAMOND-HANDS VERKAUFSLOGIK (Normales Trading)
             // ==========================================
             for (let data of marketData) {
                 if (data.shares > 0) {
@@ -109,49 +129,52 @@ export async function main(ns) {
                         let soldPrice = ns.stock.sellStock(data.sym, data.shares);
                         if (soldPrice > 0) {
                             let reason = trendDead ? "TREND-BRUCH" : (deadCapital ? "STAGNATION" : "GEWINNMITNAHME");
-                            log(ns, `HIGH-IMPACT EXIT [${reason}]: ${data.sym} liquidiert | Netto: $${ns.format.number(netProfit)}`, "WARN");
+                            log(ns, `HIGH-IMPACT EXIT [${reason}]: ${data.sym} | Netto: $${ns.format.number(netProfit)}`, "WARN");
                         }
                     }
                 }
             }
 
-            // Budget-Update nach Verkäufen
+            // Budget-Update: FÜR DAS TRADING NUTZEN WIR ALLES BIS AUF 100 MIO!
             myMoney = ns.getServerMoneyAvailable("home");
-            let remainingBudget = Math.max(0, myMoney - profile.safetyReserve);
+            
+            // Wenn wir die Corp-Phase bereits sparen, aber noch NICHT das Geld haben, 
+            // lassen wir den Markt die Arbeit machen (wir ignorieren profile.safetyReserve für den Aktienkauf!)
+            let tradingBudget = Math.max(0, myMoney - TRADING_RESERVE);
 
             // ==========================================
-            // PASS 2: WASSERFALL / SPILLOVER KAUFLOGIK
+            // 5. WASSERFALL / SPILLOVER KAUFLOGIK
             // ==========================================
             let candidates = marketData
                 .filter(d => d.forecast >= 0.60 && d.volatility >= 0.005 && d.shares < d.maxShares)
                 .sort((a, b) => b.momentumScore - a.momentumScore);
 
-            // PRIORITY-SIGNAL: Wenn Kaufchancen da sind, sperren wir Port 2 für andere Manager
-            if (candidates.length > 0 && remainingBudget > 10_000_000) {
+            // PRIORITY-SIGNAL
+            if (candidates.length > 0 && tradingBudget > 10_000_000) {
                 ns.writePort(2, "STOCK_ACTIVE");
             } else {
                 ns.clearPort(2);
             }
 
-            if (remainingBudget > 10_000_000) {
+            if (tradingBudget > 10_000_000) {
                 for (let best of candidates) {
-                    if (remainingBudget < 10_000_000) break;
+                    if (tradingBudget < 10_000_000) break;
 
                     let spaceLeft = best.maxShares - best.shares;
-                    let maxAffordable = Math.floor((remainingBudget - 100_000) / best.askPrice);
+                    let maxAffordable = Math.floor((tradingBudget - 100_000) / best.askPrice);
                     let desiredShares = Math.min(spaceLeft, maxAffordable);
                     let investmentVolume = desiredShares * best.askPrice;
 
                     if (desiredShares > 0 && investmentVolume > 10_000_000) {
                         let cost = investmentVolume + 100_000;
-                        if (myMoney > cost + profile.safetyReserve) {
+                        if (myMoney > cost + TRADING_RESERVE) {
                             let purchasedShares = ns.stock.buyStock(best.sym, desiredShares);
                             if (purchasedShares > 0) {
                                 ns.writePort(1, "PAUSE_BATCHING");
-                                log(ns, `WASSERFALL-KAUF: ${best.sym} | Volumen: $${ns.format.number(investmentVolume)} | Score: ${best.momentumScore.toFixed(4)}`, "SUCCESS");
+                                log(ns, `WASSERFALL-KAUF: ${best.sym} | Volumen: $${ns.format.number(investmentVolume)}`, "SUCCESS");
                                 
-                                remainingBudget -= cost;
-                                myMoney -= cost; // myMoney ebenfalls anpassen, damit der Budget-Check beim nächsten Durchlauf stimmt
+                                tradingBudget -= cost;
+                                myMoney -= cost; 
                             }
                         }
                     }
@@ -159,7 +182,7 @@ export async function main(ns) {
             }
 
         } catch (e) {
-            // Lautloser Fail bei kritischen API-Änderungen, bis der nächste 6-Sekunden-Tick anläuft
+            // API-Sicherheitsnetz
         }
     }
 }

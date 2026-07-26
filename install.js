@@ -13,6 +13,7 @@ export async function main(ns) {
 
   const files = [
     "boot.js",
+    "update.js",
     "batching/dispatcher.js",
     "batching/hack.js",
     "batching/grow.js",

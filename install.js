@@ -41,6 +41,7 @@ export async function main(ns) {
     ns.tprint("Überprüfe die Branch- bzw. Dateipfade und führe den Befehl erneut aus.");
   }
 
-  ns.tprint(`Download finished. Please check the logs for any errors. Type "run update.js main" to start the update.`);
-
+  ns.tprint(`Download finished. Starting update.js...`);
+  ns.sleep(1000);
+  ns.run("update.js", 1, branch);
 }

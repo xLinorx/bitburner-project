@@ -66,6 +66,7 @@ export async function main(ns) {
   }
 
   ns.tprint("Starting boot.js to initialize the project...");
+  ns.sleep(500);
   ns.run("boot.js");
 
 }

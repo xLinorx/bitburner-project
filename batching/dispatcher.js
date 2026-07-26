@@ -183,12 +183,17 @@ function calculateRamPerBatch(ns, batchReqs) {
     let gRam = ns.getScriptRam("/batching/grow.js");
     let wRam = ns.getScriptRam("/batching/weaken.js");
     
+    // Berechne RAM für den durchschnittlichen Target
     let totalRam = 0;
+    let targetCount = 0;
     for (let target in batchReqs) {
         let req = batchReqs[target];
         totalRam += (req.h * hRam) + (req.g * gRam) + ((req.w1 + req.w2) * wRam);
+        targetCount++;
     }
-    return totalRam;
+    
+    // Gib durchschnittlichen RAM-Bedarf pro Target zurück
+    return Math.ceil(totalRam / Math.max(targetCount, 1));
 }
 
 function getBestTargets(ns, servers = null, count = 5) {

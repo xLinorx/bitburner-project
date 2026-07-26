@@ -12,35 +12,10 @@ export async function main(ns) {
   const baseUrl = `https://raw.githubusercontent.com/${repo}/${branch}/`;
 
   const files = [
-    "boot.js",
     "update.js",
-    "helpers.js",
-    "scan.js",
-    "batching/dispatcher.js",
-    "batching/hack.js",
-    "batching/grow.js",
-    "batching/weaken.js",
-    "lib/logger.js",
-    "lib/profile.js",
-    "managers/ascension-manager.js",
-    "managers/bladeburner-manager.js",
-    "managers/cloud-manager.js",
-    "managers/contract-solver.js",
-    "managers/corp-manager.js",
-    "managers/darkweb-manager.js",
-    "managers/favor-optimizer.js",
-    "managers/gang-manager.js",
-    "managers/hacknet-manager.js",
-    "managers/home-upgrade-manager.js",
-    "managers/nuke-manager.js",
-    "managers/sleeve-manager.js",
-    "managers/staneks-optimizer.js",
-    "managers/task-manager.js",
-    "trading/stock-engine.js",
-    "ui/dashboard.js"
   ];
 
-  ns.tprint(`Updating project files from ${repo}@${branch}...`);
+  ns.tprint(`Installing project files from ${repo}@${branch}...`);
 
   let success = 0;
   let failed = 0;
@@ -65,4 +40,7 @@ export async function main(ns) {
   if (failed > 0) {
     ns.tprint("Überprüfe die Branch- bzw. Dateipfade und führe den Befehl erneut aus.");
   }
+
+  ns.tprint(`Download finished. Please check the logs for any errors. Type "run update.js main" to start the update.`);
+
 }

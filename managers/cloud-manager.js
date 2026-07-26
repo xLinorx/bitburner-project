@@ -1,102 +1,84 @@
 import { log } from "/lib/logger.js";
-import { getGameProfile } from "/lib/profile.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    ns.print("Cloud-Manager 2.0 aktiv. Überwache pserv-Infrastruktur...");
+    ns.print("Cloud-Manager 2.0 (Vanilla API Fix) aktiv...");
 
-    const ramLimit = ns.cloud.getRamLimit();
-    const serverLimit = ns.cloud.getServerLimit();
-
-    // Harte RAM-Limits je nach Spielphase, um unkontrolliertes Verbrennen zu stoppen
-    const CAPS = {
-        "EARLY": 256,       // 256 GB Max im Early Game
-        "MID": 1024,        // 1 TB Max im Mid Game
-        "LATE": 16384,      // 16 TB Max (Pre-Corp)
-        "ENDGAME": 1048576  // 1 PB (Uncapped)
-    };
+    const SERVER_LIMIT = 25; // Vanilla Bitburner Limit
+    const MAX_RAM = 1048576; // 1 TB (Vanilla Hardcap)
 
     while (true) {
-        let profile = getGameProfile(ns);
 
-        // Priority-Lock: Wenn die Börse aktiv gute Trades sieht, pausieren wir den Einkauf
-        if (ns.peek(2) === "STOCK_ACTIVE") {
-            ns.print("[PRIORITY-LOCK] Stock-Engine hat Vorrang. Pausiere P-Server Käufe...");
-            await ns.sleep(3000);
+        // Port‑2‑Lock: Börse hat Vorrang
+        let port2 = ns.readPort(2);
+        if (port2 !== "NULL PORT DATA" && port2 === "STOCK_ACTIVE") {
+            await ns.sleep(5000);
             continue;
         }
 
-        let currentServers = ns.cloud.getServerNames();
         let myMoney = ns.getServerMoneyAvailable("home");
-        
-        // BUDGET-SPLITTING: Maximal 10% des Überschusses für Server-Upgrades nutzen
-        let surplus = Math.max(0, myMoney - profile.safetyReserve);
-        let spendableMoney = surplus * 0.10;
+        let servers = ns.getPurchasedServers();
 
-        // Bestimme das erlaubte Maximum für die aktuelle Phase (Standard-Fallback 1TB)
-        let currentCap = CAPS[profile.phase] || 1024;
+        // 1. Initialer Einkauf bis zum Limit
+        if (servers.length < SERVER_LIMIT) {
+            let cost = ns.getPurchasedServerCost(8);
+            if (myMoney > cost) {
 
-        // 1. Initialer Einkauf bis zum Limit (25 Server)
-        if (currentServers.length < serverLimit) {
-            let cost = ns.cloud.getServerCost(8);
-            if (spendableMoney > cost) {
+                // Freien Namen finden
                 let i = 0;
-                while (currentServers.includes("pserv-" + i) || ns.serverExists("pserv-" + i)) {
-                    i++;
-                }
-                
-                let hostname = ns.cloud.purchaseServer("pserv-" + i, 8);
+                while (servers.includes("pserv-" + i)) i++;
+
+                let hostname = ns.purchaseServer("pserv-" + i, 8);
                 if (hostname) {
-                    ns.print(`[+] Neuer Server: ${hostname} (8GB)`);
+                    ns.print(`[+] Neuer Server gekauft: ${hostname} (8GB)`);
                 }
             }
-        } 
-        // 2. Lifecycle-Management & RAM-Verdopplung
+        }
+
+        // 2. Lifecycle & RAM‑Verdopplung
         else {
-            let smallestRam = ramLimit;
+
+            // Kleinsten Server finden
             let smallestServer = "";
-            
-            for (let srv of currentServers) {
-                let srvRam = ns.getServerMaxRam(srv);
-                if (srvRam <= smallestRam) {
-                    smallestRam = srvRam;
+            let smallestRam = MAX_RAM;
+
+            for (let srv of servers) {
+                let ram = ns.getServerMaxRam(srv);
+                if (ram < smallestRam) {
+                    smallestRam = ram;
                     smallestServer = srv;
                 }
             }
 
-            // NEU: Prüfung gegen das absolute Spielphasen-Cap ODER das Spiel-Limit
-            if (smallestRam >= currentCap || smallestRam >= ramLimit) {
-                // Wir haben das Limit der Phase erreicht. Wir schlafen länger und schonen das Budget.
+            // Alle Server bereits auf Max‑RAM
+            if (smallestRam >= MAX_RAM) {
                 await ns.sleep(60000);
                 continue;
             }
 
             let nextRam = smallestRam * 2;
-            let upgradeCost = ns.cloud.getServerCost(nextRam);
+            let upgradeCost = ns.getPurchasedServerCost(nextRam);
 
-            if (spendableMoney > upgradeCost) {
+            if (myMoney > upgradeCost) {
+
+                // Alten Server sauber entfernen
                 ns.killall(smallestServer);
                 await ns.sleep(100);
-                
-                let deleteSuccess = ns.cloud.deleteServer(smallestServer);
-                if (!deleteSuccess) {
-                    await ns.sleep(1000);
-                    continue;
-                }
 
+                ns.deleteServer(smallestServer);
+
+                // Neuen Namen finden
                 let i = 0;
-                while (currentServers.includes("pserv-" + i) || ns.serverExists("pserv-" + i)) {
-                    i++;
-                }
-                let upgradeName = "pserv-" + i;
+                while (servers.includes("pserv-" + i) || ns.serverExists("pserv-" + i)) i++;
 
-                let newName = ns.cloud.purchaseServer(upgradeName, nextRam);
+                let newName = ns.purchaseServer("pserv-" + i, nextRam);
                 if (newName) {
-                    ns.print(`[^] Upgrade: ${newName} läuft nun mit ${ns.format.number(nextRam)}GB RAM.`);
+                    ns.print(`[^] Upgrade: ${newName} läuft nun mit ${ns.formatNumber(nextRam)}GB RAM.`);
                 }
             }
         }
+
         await ns.sleep(3000);
     }
 }

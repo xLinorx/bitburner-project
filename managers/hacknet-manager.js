@@ -4,88 +4,130 @@ import { getGameProfile } from "/lib/profile.js";
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    ns.print("Hacknet-Manager aktiv. Überwache Wirtschaftlichkeit und Phasen...");
+    log(ns, "Hacknet-Manager 3.0 (ROI-Fix) aktiv...", "INFO");
+
+    const MAX_NODES = 25;
+    const MAX_LEVEL = 200;
+    const MAX_RAM = 64;
+    const MAX_CORES = 16;
 
     while (true) {
         let profile = getGameProfile(ns);
+        let money = ns.getServerMoneyAvailable("home");
 
-        // 1. Priority-Lock: Wenn die Börse aktiv handelt, hat sie absoluten Vorrang
-        if (ns.peek(2) === "STOCK_ACTIVE") {
-            await ns.sleep(3000);
-            continue;
-        }
-
-        // 2. Standby-Modus in LATE / ENDGAME: Kein sinnloses Kapitalverbrennen vor/während der Corp-Gründung
+        // === 1. Phase-Schrank: LATE/ENDGAME = Standby ============================
         if (profile.phase === "LATE" || profile.phase === "ENDGAME") {
-            await ns.sleep(30000);
+            await ns.sleep(60000);
             continue;
         }
 
-        let myMoney = ns.getServerMoneyAvailable("home");
-        
-        // BUDGET-SPLITTING: Nutzt maximal 10% des Überschusses über der Sicherheitsreserve
-        let surplus = Math.max(0, myMoney - profile.safetyReserve);
-        let spendableMoney = surplus * 0.10;
-
-        if (spendableMoney <= 0) {
+        // === 2. Budget ===========================================================
+        let spendable = money - profile.safetyReserve;
+        if (spendable <= 0) {
             await ns.sleep(5000);
             continue;
         }
 
-        let numNodes = ns.hacknet.numNodes();
-        let maxNodes = ns.hacknet.maxNumNodes();
-        let boughtSomething = false;
+        // === 3. ROI-Berechnung ===================================================
+        let best = null;
+        let bestROI = 0;
 
-        // 3. Kontrollierter Zukauf von Nodes (limitiert auf max 16 Nodes, um Kosten-Explosion zu stoppen)
-        let purchaseCost = ns.hacknet.getPurchaseNodeCost();
-        if (numNodes < maxNodes && numNodes < 16 && spendableMoney >= purchaseCost) {
-            let res = ns.hacknet.purchaseNode();
-            if (res !== -1) {
-                ns.print(`[+] Neue Hacknet-Node #${res} gekauft.`);
-                boughtSomething = true;
+        // --- Neuer Node ----------------------------------------------------------
+        if (ns.hacknet.numNodes() < MAX_NODES) {
+            let cost = ns.hacknet.getPurchaseNodeCost();
+            let gain = estimateNodeGain(ns);
+            let roi = gain / cost;
+
+            if (roi > bestROI && spendable > cost) {
+                bestROI = roi;
+                best = { type: "new" };
             }
         }
 
-        // 4. Ausbalancierte Upgrades mit harten Obergrenzen (Level 150, 64GB RAM, 8 Cores)
-        for (let i = 0; i < numNodes; i++) {
-            myMoney = ns.getServerMoneyAvailable("home");
-            surplus = Math.max(0, myMoney - profile.safetyReserve);
-            spendableMoney = surplus * 0.10;
-
+        // --- Bestehende Nodes -----------------------------------------------------
+        for (let i = 0; i < ns.hacknet.numNodes(); i++) {
             let stats = ns.hacknet.getNodeStats(i);
 
-            // Level Upgrade (Stoppt bei 150, da danach das ROI extrem einbricht)
-            let lvlCost = ns.hacknet.getLevelUpgradeCost(i, 1);
-            if (stats.level < 150 && spendableMoney >= lvlCost) {
-                if (ns.hacknet.upgradeLevel(i, 1)) {
-                    boughtSomething = true;
-                    continue;
+            // Level Upgrade
+            if (stats.level < MAX_LEVEL) {
+                let cost = ns.hacknet.getLevelUpgradeCost(i, 1);
+                let gain = estimateLevelGain(stats);
+                let roi = gain / cost;
+
+                if (roi > bestROI && spendable > cost) {
+                    bestROI = roi;
+                    best = { type: "level", node: i };
                 }
             }
 
-            // RAM Upgrade (Stoppt bei 64GB)
-            let ramCost = ns.hacknet.getRamUpgradeCost(i, 1);
-            if (stats.ram < 64 && spendableMoney >= ramCost) {
-                if (ns.hacknet.upgradeRam(i, 1)) {
-                    boughtSomething = true;
-                    continue;
+            // RAM Upgrade
+            if (stats.ram < MAX_RAM) {
+                let cost = ns.hacknet.getRamUpgradeCost(i, 1);
+                let gain = estimateRamGain(stats);
+                let roi = gain / cost;
+
+                if (roi > bestROI && spendable > cost) {
+                    bestROI = roi;
+                    best = { type: "ram", node: i };
                 }
             }
 
-            // Core Upgrade (Stoppt bei 8 Cores)
-            let coreCost = ns.hacknet.getCoreUpgradeCost(i, 1);
-            if (stats.cores < 8 && spendableMoney >= coreCost) {
-                if (ns.hacknet.upgradeCore(i, 1)) {
-                    boughtSomething = true;
-                    continue;
+            // Core Upgrade
+            if (stats.cores < MAX_CORES) {
+                let cost = ns.hacknet.getCoreUpgradeCost(i, 1);
+                let gain = estimateCoreGain(stats);
+                let roi = gain / cost;
+
+                if (roi > bestROI && spendable > cost) {
+                    bestROI = roi;
+                    best = { type: "core", node: i };
                 }
             }
         }
 
-        if (!boughtSomething) {
-            await ns.sleep(5000);
+        // === 4. Upgrade ausführen =================================================
+        if (best !== null) {
+            switch (best.type) {
+                case "new":
+                    ns.hacknet.purchaseNode();
+                    break;
+                case "level":
+                    ns.hacknet.upgradeLevel(best.node, 1);
+                    break;
+                case "ram":
+                    ns.hacknet.upgradeRam(best.node, 1);
+                    break;
+                case "core":
+                    ns.hacknet.upgradeCore(best.node, 1);
+                    break;
+            }
+            await ns.sleep(50);
         } else {
-            await ns.sleep(1000);
+            await ns.sleep(2000);
         }
     }
+}
+
+// ============================================================================
+// ROI-Schätzfunktionen
+// ============================================================================
+
+function estimateNodeGain(ns) {
+    // Durchschnittliche Produktion eines Level-1 Nodes
+    return 1.5; 
+}
+
+function estimateLevelGain(stats) {
+    // Level erhöht Produktion linear
+    return stats.production / stats.level;
+}
+
+function estimateRamGain(stats) {
+    // RAM erhöht Produktion um ~7% pro Stufe
+    return stats.production * 0.07;
+}
+
+function estimateCoreGain(stats) {
+    // Cores erhöhen Produktion um ~14% pro Stufe
+    return stats.production * 0.14;
 }

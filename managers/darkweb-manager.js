@@ -1,58 +1,86 @@
 import { log } from "/lib/logger.js";
+import { getGameProfile } from "/lib/profile.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    log(ns, "Darkweb- & Programm-Manager aktiv...", "INFO");
+    log(ns, "Darkweb-Manager 3.0 (Wirtschafts-Fix) aktiv...", "INFO");
 
-    const programs = [
-        "BruteSSH.exe",
-        "FTPCrack.exe",
-        "relaySMTP.exe",
-        "HTTPWorm.exe",
-        "SQLInject.exe",
-        "ServerProfiler.exe",
-        "Formulas.exe"
+    // Programme nach strategischem Wert sortiert
+    const PROGRAMS = [
+        "BruteSSH.exe",      // Port 1 – Early Game Pflicht
+        "FTPCrack.exe",      // Port 2 – Early Game Pflicht
+        "relaySMTP.exe",     // Port 3
+        "HTTPWorm.exe",      // Port 4
+        "SQLInject.exe",     // Port 5
+        "ServerProfiler.exe",// Optional
+        "Formulas.exe"       // Optional (nur für Stock Engine)
     ];
 
     while (true) {
-        let myMoney = ns.getServerMoneyAvailable("home");
-        
-        // 1. Prüfen ob Tor-Router vorhanden ist
+        let profile = getGameProfile(ns);
+        let money = ns.getServerMoneyAvailable("home");
+
+        // === 1. Phase-Schrank ==================================================
+        // EARLY: Nur Port-Programme kaufen
+        let allowOptional = !(profile.phase === "EARLY");
+
+        // === 2. Budget-Schrank =================================================
+        let spendable = money - profile.safetyReserve;
+        if (spendable <= 0) {
+            await ns.sleep(20000);
+            continue;
+        }
+
+        // === 3. Tor-Router kaufen ==============================================
         if (!ns.hasTorRouter()) {
-            let torCost = 200000; // 200k
-            if (myMoney > torCost * 2) { // Nur kaufen, wenn genug Puffer da ist
+            let torCost = 200000;
+            if (spendable > torCost * 2) {
                 try {
                     if (ns.singularity.purchaseTor()) {
                         log(ns, "Tor-Router erfolgreich gekauft.", "SUCCESS");
                     }
-                } catch (e) {
-                    // Fängt den Fehler ab, falls die Singularity-API (SF4) im aktuellen BitNode noch nicht verfügbar ist
+                } catch {
+                    // API evtl. nicht verfügbar
                 }
             }
-        } 
-        // 2. Programme nacheinander kaufen (Sicherheitscheck für ns.darkweb hinzugefügt)
-        else if (ns.hasTorRouter() && typeof ns.darkweb !== "undefined") {
-            let purchasedAll = true;
-            for (let prog of programs) {
+            await ns.sleep(20000);
+            continue;
+        }
+
+        // === 4. Programme kaufen ===============================================
+        if (typeof ns.darkweb !== "undefined") {
+
+            for (let prog of PROGRAMS) {
+
+                // Optional Programme erst ab MID/LATE
+                if (!allowOptional && (prog === "ServerProfiler.exe" || prog === "Formulas.exe")) {
+                    continue;
+                }
+
                 if (!ns.fileExists(prog, "home")) {
-                    purchasedAll = false;
                     let cost = ns.darkweb.getProgramCost(prog);
-                    
-                    // Wir kaufen nur, wenn nach dem Kauf noch genügend Geld für den Trader da ist
-                    if (myMoney > cost * 3) {
+
+                    // Sicherheitslimit: Nur kaufen, wenn nach Kauf noch Reserve übrig bleibt
+                    if (spendable > cost * 2) {
                         if (ns.darkweb.buyProgram(prog)) {
-                            log(ns, `Erfolgreich erworben: ${prog}`, "SUCCESS");
+                            log(ns, `Programm gekauft: ${prog}`, "SUCCESS");
                         }
                     }
-                    break; // Immer der Reihe nach kaufen
+
+                    // Immer nur EIN Programm pro Tick kaufen
+                    break;
                 }
             }
-            if (purchasedAll) {
-                log(ns, "Alle Programme im Besitz. Skript beendet sich.", "INFO");
-                return; // Läuft nicht endlos weiter, wenn alles da ist
+
+            // Wenn alle Programme vorhanden → Skript beenden
+            let allOwned = PROGRAMS.every(p => ns.fileExists(p, "home"));
+            if (allOwned) {
+                log(ns, "Alle Darkweb-Programme vorhanden. Manager beendet sich.", "INFO");
+                return;
             }
         }
-        await ns.sleep(20000); // Sehr niedrige Frequenz schont die CPU
+
+        await ns.sleep(20000);
     }
 }

@@ -4,59 +4,67 @@ import { getGameProfile } from "/lib/profile.js";
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    ns.disableLog("getServerMoneyAvailable");
-    ns.disableLog("sleep");
-    log(ns, "HWGW-Micro-Batching-Engine gestartet. (Deadlock-Schutz aktiv)", "INFO");
+    log(ns, "HWGW-Micro-Batching-Engine (Stabilitäts-Fix) aktiv.", "INFO");
 
     while (true) {
+
+        // === 1. Port-1: Nur EIN Signal pro Tick lesen ==========================
+        let signal = ns.readPort(1);
+        if (signal !== "NULL PORT DATA") {
+            // Später können hier echte Kommandos verarbeitet werden
+            log(ns, `Dispatcher-Signal empfangen: ${signal}`, "INFO");
+        }
+
+        // === 2. Profil laden ====================================================
         let profile = getGameProfile(ns);
 
-        while (ns.readPort(1) !== "NULL PORT DATA") {
-            // Port-Daten bereinigen
-        }
+        // === 3. Serverliste =====================================================
+        let servers = getReachableServers(ns);
+        let targets = servers.filter(s => ns.hasRootAccess(s) && !s.startsWith("pserv") && s !== "home");
 
-        let reachableServers = getReachableServers(ns);
-        let target = getBestTarget(ns, reachableServers);
-        let hostServers = reachableServers.filter(server => server !== "home" && ns.hasRootAccess(server));
-        
-        let totalRam = 0;
-        for (let srv of hostServers) {
-            totalRam += ns.getServerMaxRam(srv) - ns.getServerUsedRam(srv);
-        }
+        let target = getBestTarget(ns, servers);
 
-        if (totalRam < 64) {
+        // === 4. Host-Server (nur NPC + pserv) ==================================
+        let hosts = servers.filter(s => ns.hasRootAccess(s) && s !== "home");
+
+        // === 5. RAM-Berechnung ==================================================
+        let totalRam = hosts.reduce((sum, srv) => sum + (ns.getServerMaxRam(srv) - ns.getServerUsedRam(srv)), 0);
+
+        if (totalRam < 8) {
             await ns.sleep(1500);
             continue;
         }
 
+        // === 6. Timing-Berechnung ==============================================
         let weakenTime = ns.getWeakenTime(target);
-        let stagger = profile.stagger;
-        
-        let hEnd = weakenTime - (stagger * 3);
-        let w1End = weakenTime - (stagger * 2);
-        let gEnd = weakenTime - stagger;
-        let w2End = weakenTime;
+        let hackTime = ns.getHackTime(target);
+        let growTime = ns.getGrowTime(target);
 
-        let hDelay = Math.max(0, w1End - ns.getHackTime(target));
-        let w1Delay = 0;
-        let gDelay = Math.max(0, w2End - ns.getGrowTime(target));
+        let stagger = profile.stagger;
+
+        let w2End = weakenTime;
+        let gEnd = w2End - stagger;
+        let w1End = gEnd - stagger;
+        let hEnd = w1End - stagger;
+
+        let hDelay = Math.max(0, hEnd - hackTime);
+        let w1Delay = Math.max(0, w1End - weakenTime);
+        let gDelay = Math.max(0, gEnd - growTime);
         let w2Delay = 0;
 
-        for (let srv of hostServers) {
+        // === 7. Batch-Verteilung ===============================================
+        for (let srv of hosts) {
             let freeRam = ns.getServerMaxRam(srv) - ns.getServerUsedRam(srv);
-            if (freeRam < 10) continue;
+            if (freeRam < 4) continue;
 
-            ns.scp([
-                "/batching/hack.js",
-                "/batching/grow.js",
-                "/batching/weaken.js"
-            ], srv, "home");
+            ns.scp(["/batching/hack.js", "/batching/grow.js", "/batching/weaken.js"], srv, "home");
 
             let hRam = ns.getScriptRam("/batching/hack.js");
             let gRam = ns.getScriptRam("/batching/grow.js");
             let wRam = ns.getScriptRam("/batching/weaken.js");
 
             let weights = profile.threadWeights;
+
             let hThreads = Math.floor((freeRam * weights.h) / hRam);
             let w1Threads = Math.floor((freeRam * weights.w1) / wRam);
             let gThreads = Math.floor((freeRam * weights.g) / gRam);
@@ -68,47 +76,45 @@ export async function main(ns) {
             if (w2Threads > 0) ns.exec("/batching/weaken.js", srv, w2Threads, target, w2Delay);
         }
 
-        let sleepTime = Math.min(weakenTime + 500, 15000);
-        await ns.sleep(sleepTime);
+        // === 8. Sleep ===========================================================
+        await ns.sleep(Math.min(weakenTime + 500, 15000));
     }
 }
 
-function getReachableServers(ns, startServer = "home") {
-    const visited = new Set([startServer]);
-    const queue = [startServer];
+function getReachableServers(ns, start = "home") {
+    const visited = new Set([start]);
+    const queue = [start];
 
     while (queue.length > 0) {
         const current = queue.shift();
-        for (const neighbor of ns.scan(current)) {
-            if (!visited.has(neighbor)) {
-                visited.add(neighbor);
-                queue.push(neighbor);
+        for (const next of ns.scan(current)) {
+            if (!visited.has(next)) {
+                visited.add(next);
+                queue.push(next);
             }
         }
     }
-
-    return Array.from(visited);
+    return [...visited];
 }
 
-function getBestTarget(ns, servers = null) {
-    let reachableServers = servers || getReachableServers(ns);
+function getBestTarget(ns, servers) {
+    let best = "n00dles";
+    let bestScore = 0;
+    let hacking = ns.getHackingLevel();
 
-    let playerHacking = ns.getHackingLevel();
-    let bestTarget = "n00dles";
-    let maxScore = 0;
+    for (let s of servers) {
+        if (s === "home" || s.startsWith("pserv") || !ns.hasRootAccess(s)) continue;
 
-    for (let node of reachableServers) {
-        if (node === "home" || node.startsWith("pserv") || !ns.hasRootAccess(node)) continue;
-        if (ns.getServerRequiredHackingLevel(node) <= playerHacking) {
-            let maxMoney = ns.getServerMaxMoney(node);
-            let minSec = ns.getServerMinSecurityLevel(node);
+        if (ns.getServerRequiredHackingLevel(s) <= hacking) {
+            let maxMoney = ns.getServerMaxMoney(s);
+            let minSec = ns.getServerMinSecurityLevel(s);
             let score = maxMoney / Math.max(minSec, 1);
 
-            if (score > maxScore) {
-                maxScore = score;
-                bestTarget = node;
+            if (score > bestScore) {
+                bestScore = score;
+                best = s;
             }
         }
     }
-    return bestTarget;
+    return best;
 }

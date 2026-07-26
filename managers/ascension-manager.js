@@ -4,51 +4,84 @@ import { getGameProfile } from "/lib/profile.js";
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    log(ns, "Ascension- & Auto-Install-Manager aktiv...", "INFO");
+    log(ns, "Ascension- & Auto-Install-Manager 3.0 (Wirtschafts-Fix) aktiv...", "INFO");
 
     while (true) {
         try {
-            // Prüfen ob Singularity-API verfügbar ist (Early-Game Schutz)
+            // === 1. Singularity API Check =========================================
             if (typeof ns.singularity === "undefined") {
                 await ns.sleep(60000);
                 continue;
             }
 
             let profile = getGameProfile(ns);
+            let money = ns.getServerMoneyAvailable("home");
             let factions = ns.getPlayer().factions;
-            let myMoney = ns.getServerMoneyAvailable("home");
 
-            // 1. Fraktions-Einladungen automatisch annehmen
-            let invitations = ns.singularity.getFactionInvitations();
-            for (let fac of invitations) {
+            // === 2. Phase-Schrank: EARLY/MID keine Aug-Käufe ======================
+            if (profile.phase === "EARLY" || profile.phase === "MID") {
+                await ns.sleep(60000);
+                continue;
+            }
+
+            // === 3. Budget-Schrank ===============================================
+            let spendable = money - profile.safetyReserve;
+            if (spendable <= 0) {
+                await ns.sleep(30000);
+                continue;
+            }
+
+            // === 4. Fraktions-Einladungen automatisch annehmen ====================
+            let invites = ns.singularity.getFactionInvitations();
+            for (let fac of invites) {
                 ns.singularity.joinFaction(fac);
                 log(ns, `Fraktion beigetreten: ${fac}`, "SUCCESS");
             }
 
-            // 2. Prüfen ob kaufbare Augmentationen vorliegen
-            let targetFaction = factions[0]; // Beispiel: Primäre Fraktion prüfen
-            if (targetFaction) {
-                let augs = ns.singularity.getAugmentationsFromFaction(targetFaction);
-                let ownedAugs = ns.singularity.getOwnedAugmentations(true);
+            // === 5. Augmentations priorisieren ===================================
+            for (let fac of factions) {
+                let augs = ns.singularity.getAugmentationsFromFaction(fac);
+                let owned = ns.singularity.getOwnedAugmentations(true);
 
-                // Wenn Geld und Voraussetzungen da sind, Augmentationen und deren Voraussetzungen kaufen
-                for (let aug of augs) {
-                    if (!ownedAugs.includes(aug)) {
-                        let cost = ns.singularity.getAugmentationCost(aug);
-                        let repCost = ns.singularity.getAugmentationRepReq(aug);
-                        let playerRep = ns.singularity.getFactionRep(targetFaction);
+                // Filter: Nur fehlende Augs
+                let missing = augs.filter(a => !owned.includes(a));
+                if (missing.length === 0) continue;
 
-                        if (myMoney > cost + profile.safetyReserve && playerRep >= repCost) {
-                            if (ns.singularity.purchaseAugmentation(targetFaction, aug)) {
-                                log(ns, `Augmentation erfolgreich erworben: ${aug}`, "SUCCESS");
-                            }
-                        }
+                // Wertvollste Augmentation bestimmen
+                let bestAug = null;
+                let bestRepReq = 0;
+
+                for (let aug of missing) {
+                    let repReq = ns.singularity.getAugmentationRepReq(aug);
+                    if (repReq > bestRepReq) {
+                        bestRepReq = repReq;
+                        bestAug = aug;
                     }
+                }
+
+                if (!bestAug) continue;
+
+                let repReq = ns.singularity.getAugmentationRepReq(bestAug);
+                let rep = ns.singularity.getFactionRep(fac);
+                let cost = ns.singularity.getAugmentationCost(bestAug);
+
+                // === 6. Reputation prüfen =========================================
+                if (rep < repReq) {
+                    // Spendenlogik ist im Favor-Optimizer → hier kein Doppelcode
+                    continue;
+                }
+
+                // === 7. Budget prüfen =============================================
+                if (spendable < cost) continue;
+
+                // === 8. Kauf durchführen ==========================================
+                if (ns.singularity.purchaseAugmentation(fac, bestAug)) {
+                    log(ns, `Augmentation gekauft: ${bestAug} (Fraktion: ${fac})`, "SUCCESS");
                 }
             }
 
         } catch (e) {
-            // Fängt fehlende API-Rechte im Early-Game ab
+            log(ns, `Ascension-Fehler: ${String(e)}`, "ERROR");
         }
 
         await ns.sleep(30000);

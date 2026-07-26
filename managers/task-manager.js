@@ -1,53 +1,70 @@
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    ns.print("Task-Manager (Player-Control) startet...");
+    ns.print("Task-Manager 3.0 (Smart Work Optimizer) aktiv...");
 
-    // ==========================================
-    // 1. API-CHECK: Haben wir Singularity (SF4)?
-    // ==========================================
+    // === 1. Singularity API Check ============================================
     try {
-        // Wir testen vorsichtig, ob die API erreichbar ist
         ns.singularity.getCurrentWork();
-    } catch (e) {
-        ns.print("[WARN] Singularity API (SF4) nicht verfügbar.");
-        ns.print("[INFO] Player-Automatisierung ist deaktiviert. Du musst manuell arbeiten/studieren.");
-        ns.tprint("[WARN] Task-Manager: Singularity (SF4) fehlt. Beende Player-Automatisierung für diesen Node.");
-        return; // Skript beendet sich sauber selbst, kein roter Error-Screen mehr!
+    } catch {
+        ns.print("[WARN] Singularity API nicht verfügbar. Player-Automation deaktiviert.");
+        return;
     }
 
-    // ==========================================
-    // 2. AUTONOMER BETRIEB (Falls SF4 vorhanden)
-    // ==========================================
-    ns.print("[OK] Singularity API aktiv. Übernehme Charakter-Steuerung...");
+    const TARGET_COMPANY = "Alpha Enterprises";
     const TARGET_REP = 400000;
-    const COMPANY = "Alpha Enterprises";
+
+    const UNI_CITY = "Sector-12";
     const UNIVERSITY = "Rothman University";
     const COURSE = "Algorithms";
 
     while (true) {
         let work = ns.singularity.getCurrentWork();
-        let currentRep = ns.singularity.getCompanyRep(COMPANY);
+        let profile = ns.getPlayer();
+        let rep = ns.singularity.getCompanyRep(TARGET_COMPANY);
 
-        if (currentRep < TARGET_REP) {
-            if (!work || work.type !== "COMPANY" || work.companyName !== COMPANY) {
-                try {
-                    ns.singularity.applyToCompany(COMPANY);
-                    ns.singularity.workForCompany(COMPANY, false);
-                } catch (e) {}
-            }
-        } else {
-            if (work && work.type === "COMPANY" && work.companyName === COMPANY) {
-                ns.singularity.stopAction();
-            }
-            work = ns.singularity.getCurrentWork();
-            if (!work || work.type !== "CLASS") {
-                try {
-                    if (ns.getPlayer().city !== "Sector-12") ns.singularity.travelToCity("Sector-12");
-                    ns.singularity.universityCourse(UNIVERSITY, COURSE, false);
-                } catch (e) {}
-            }
+        // === 2. Phase-Schrank ==================================================
+        // EARLY: Crime → Karma farmen
+        if (profile.hacking < 150) {
+            ns.singularity.commitCrime("Shoplift", false);
+            await ns.sleep(5000);
+            continue;
         }
-        await ns.sleep(15000); 
+
+        // MID: Hacking trainieren
+        if (profile.hacking < 500) {
+            if (profile.city !== UNI_CITY) ns.singularity.travelToCity(UNI_CITY);
+            ns.singularity.universityCourse(UNIVERSITY, COURSE, false);
+            await ns.sleep(15000);
+            continue;
+        }
+
+        // LATE/ENDGAME: Company → Rep farmen
+        if (rep < TARGET_REP) {
+            if (!work || work.type !== "COMPANY" || work.companyName !== TARGET_COMPANY) {
+                try {
+                    ns.singularity.applyToCompany(TARGET_COMPANY);
+                    ns.singularity.workForCompany(TARGET_COMPANY, false);
+                } catch {}
+            }
+            await ns.sleep(15000);
+            continue;
+        }
+
+        // === 3. Wenn Company-Rep erreicht → Uni für SF4/Hacking =================
+        if (work && work.type === "COMPANY") {
+            ns.singularity.stopAction();
+        }
+
+        work = ns.singularity.getCurrentWork();
+
+        if (!work || work.type !== "CLASS") {
+            try {
+                if (profile.city !== UNI_CITY) ns.singularity.travelToCity(UNI_CITY);
+                ns.singularity.universityCourse(UNIVERSITY, COURSE, false);
+            } catch {}
+        }
+
+        await ns.sleep(15000);
     }
 }

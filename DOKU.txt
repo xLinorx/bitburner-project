@@ -1,7 +1,7 @@
 ================================================================================
            PROJEKT 2.0: AUTOMATION — TECHNISCHE SYSTEMDOKUMENTATION
 ================================================================================
-Stand: Bitburner v3.0.1+ (Endgame-Optimiert, Phasen-gesteuert & Hybrid-IPC)
+Stand: Bitburner v3.0.1+ (Endgame-Optimiert, Two-Tier-Budget & Corp-Trigger)
 Autor / Systemadministrator: René Klünder / Autonomes Core-System
 
 --------------------------------------------------------------------------------
@@ -10,64 +10,63 @@ Autor / Systemadministrator: René Klünder / Autonomes Core-System
 Projekt 2.0 ist eine modulare, autarke und ausfallsichere Automatisierungsarchitektur 
 für Bitburner v3.0.x. Sie setzt auf strikte Funktionstrennung, deterministisches 
 Ressourcenmanagement, mathematisch abgesicherte Investitionen und Echtzeit-
-Kommunikation zwischen den Subsystemen via Bitburner-Ports[cite: 2].
+Kommunikation zwischen den Subsystemen via Bitburner-Ports.
 
 Zentrale v3.0.1 Design-Prinzipien:
-- Namespace-Standards (v3.0.1): Server-Verwaltung läuft über den `ns.cloud`-Namespace, 
-  Benutzeroberflächen über `ns.ui`, und Zahlenformatierungen nutzen `ns.format.number()`[cite: 2].
-- Globale Finanz-Doktrin & Reserve-Schutz: Alle einkaufenden Module teilen sich 
-  die Abhängigkeit `profile.js`. Die eiserne Reserve (`safetyReserve`) wird niemals 
-  angetastet. Freies Budget berechnet sich strikt: `surplus = myMoney - safetyReserve`.
-- Master-Lock (Port 2 IPC): Die `stock-engine.js` steuert als Haupt-Renditebringer 
-  andere Einkäufer[cite: 2]. Bei aktiven Handlungsoptionen setzt sie den Lock `"STOCK_ACTIVE"`, 
-  welcher Infrastruktur-Käufe pausiert.
-- 10%-Budget-Splitting: Infrastruktur-Manager (`cloud` & `home`) dürfen pro Tick 
-  maximal 10 % des freien Überschusses ausgeben. 90 % bleiben der Börse vorbehalten.
-- Inter-Process Communication (IPC) & Deadlock-Immunität: Port 1 wird vom Dispatcher 
-  stumm geleert (`while`-Schleife), um Datenstaus zu verhindern, während der Batcher 
-  unter Volllast durchläuft[cite: 2].
-- Resource-Isolation ("home"-Schonung): Dein Heimserver ("home") wird von schwerem 
-  HWGW-Batching isoliert, um RAM für System-Skripte und Manager freizuhalten.
-- Graceful Degradation & Auto-Recovery: Try-Catch-Blöcke sichern Endgame-APIs ab[cite: 2]. 
-  Die Börsen-Engine wechselt ohne 4S-API automatisch in einen 40-Tick-Fallback-Modus.
+- Namespace-Standards: Server-Verwaltung über `ns.cloud`, TUI über `ns.ui`.
+- Two-Tier Finanz-Doktrin: Das System trennt scharf zwischen Konsum und Investment.
+  1. Infrastruktur-Reserve (`profile.safetyReserve`): Blockiert z. B. 160 Mrd. für 
+     Server- oder Home-Upgrades, um das Corp-Fundament zu schützen.
+  2. Trading-Reserve (`TRADING_RESERVE`): Die Börse arbeitet mit einem winzigen Cash-
+     Puffer (100 Mio.) und wirft den gesamten Rest des Kapitals in den Markt, um das 
+     Sparziel überhaupt erst erreichbar zu machen.
+- Der Corp-Trigger: Die Börse rechnet sekündlich das Nettovermögen (Bargeld + Depot) aus. 
+  Wird die 150-Milliarden-Marke geknackt, löst sie eine Zwangsliquidation aus und 
+  übergibt das Bargeld an den `corp-manager.js`.
+- Master-Lock (Port 2 IPC): Die `stock-engine.js` steuert Infrastruktur-Käufe. 
+  Bei aktiven Trades setzt sie `"STOCK_ACTIVE"`, was Cloud/Home-Manager einfriert.
+- 10%-Budget-Splitting: Infrastruktur-Manager dürfen pro Tick maximal 10 % 
+  des freien Überschusses ausgeben. 90 % bleiben der Börse vorbehalten.
+- IPC & Deadlock-Immunität: Port 1 wird vom Dispatcher stumm geleert (`while`-Schleife).
+- Resource-Isolation: "home" wird von HWGW-Batching isoliert, um RAM zu schonen.
 
 
 --------------------------------------------------------------------------------
 2. VOLLSTÄNDIGE VERZEICHNIS- UND MODULSTRUKTUR
 --------------------------------------------------------------------------------
 / (Root-Verzeichnis)
-├── boot.js                     # Master-Boot (Cleanup, Diagnose, Startsequenz)[cite: 2]
+├── boot.js                     # Master-Boot (Cleanup, Diagnose, Startsequenz)
 ├── DOKU.txt                    # Diese technische Projektdokumentation
 │
 ├── /lib/
-│   ├── logger.js               # Zentrales Logging (Konsole & Tail via ns.print)[cite: 2]
-│   └── profile.js              # Zentrales Phasen- & Budget-Modell (EARLY, MID, LATE, ENDGAME)[cite: 1]
+│   ├── logger.js               # Zentrales Logging (Konsole & Tail via ns.print)
+│   └── profile.js              # Zentrales Phasen- & Budget-Modell (EARLY, MID, LATE, ENDGAME)
 │
 ├── /ui/
-│   └── dashboard.js            # Live TUI-Dashboard (via ns.ui.openTail)[cite: 2]
+│   └── dashboard.js            # Live TUI-Dashboard (via ns.ui.openTail)
 │
 ├── /trading/
-│   └── stock-engine.js         # Hybrid Stock Engine (Auto-Unlock, 40-Tick-History, Master-Lock)[cite: 2]
+│   └── stock-engine.js         # Hybrid Stock Engine (Two-Tier-Budget, Corp-Trigger, 40-Tick-Fallback)
 │
 ├── /batching/
-│   ├── dispatcher.js           # HWGW-Micro-Batching-Engine (Target-Scoring, "home"-Isolation)[cite: 2]
+│   ├── dispatcher.js           # HWGW-Micro-Batching-Engine (Target-Scoring, "home"-Isolation)
 │   ├── hack.js                 # Payloads: Hack-Modul
 │   ├── grow.js                 # Payloads: Grow-Modul
 │   └── weaken.js               # Payloads: Weaken-Modul
 │
 └── /managers/
-    ├── cloud-manager.js        # pserv-Verwaltung (Port-2-Lock, 10%-Splitting, RAM-Verdopplung)[cite: 2]
-    ├── nuke-manager.js         # Autonomer NPC-Port-Opener & Root-Access-Manager[cite: 2]
+    ├── cloud-manager.js        # pserv-Verwaltung (Port-2-Lock, 10%-Splitting)
+    ├── nuke-manager.js         # Autonomer NPC-Port-Opener & Root-Access-Manager
     ├── darkweb-manager.js      # Autonomer Tor- & Programm-Einkauf
-    ├── hacknet-manager.js      # Phasen-optimierter Hacknet-Manager mit LATE/ENDGAME-Standby[cite: 2]
-    ├── contract-solver.js      # Universeller Solver für alle .cct-Dateitypen[cite: 2]
-    ├── corp-manager.js         # Corporation-Management (4000q-Turbo, Agri, Tobacco, Dividenden)[cite: 2]
+    ├── hacknet-manager.js      # Phasen-optimierter Hacknet-Manager (LATE-Standby)
+    ├── contract-solver.js      # Universeller Solver für alle .cct-Dateitypen
+    ├── corp-manager.js         # Corporation-Management (4000q-Turbo, Agri, Tobacco)
     ├── gang-manager.js         # Gang-Recruiting & dynamische Task-Zuweisung
-    ├── ascension-manager.js    # Automatisierter Augmentation-Kauf & Fraktionen[cite: 2]
-    ├── bladeburner-manager.js  # Bladeburner-Automatik (Stamina, Ops, Black Ops)[cite: 2]
-    ├── staneks-optimizer.js    # Permanentes Laden von Stanek's Matrix[cite: 2]
-    ├── home-upgrade-manager.js # Autonome Erhöhung von Home-RAM & CPU-Cores (Port-2-Lock & 10%)[cite: 2]
-    ├── favor-optimizer.js      # Automatisierte Fraktions-Spenden ab 150 Favor[cite: 2]
+    ├── ascension-manager.js    # Automatisierter Augmentation-Kauf
+    ├── bladeburner-manager.js  # Bladeburner-Automatik
+    ├── staneks-optimizer.js    # Permanentes Laden von Stanek's Matrix
+    ├── home-upgrade-manager.js # Erhöhung von Home-RAM & CPU-Cores (Port-2-Lock & 10%)
+    ├── favor-optimizer.js      # Automatisierte Fraktions-Spenden
     └── task-manager.js         # Spieler-Task-Manager mit try/catch-SF4-Sicherheitscheck
 
 
@@ -75,87 +74,79 @@ Zentrale v3.0.1 Design-Prinzipien:
 3. DETAILLIERTE MODUL- UND LOGIK-BESCHREIBUNG
 --------------------------------------------------------------------------------
 
-3.1 boot.js (Master-Boot & System-Diagnose)[cite: 2]
-- Funktion: Bereinigt den Heimserver von Altprozessen und startet alle 16 Module[cite: 1, 2].
-- Diagnose: Führt beim Start System-Checks für 4S-APIs, Singularity (SF4), Corporation (SF3), 
-  Bladeburner und Stanek durch[cite: 1, 2].
+3.1 boot.js (Master-Boot & System-Diagnose)
+- Bereinigt den Heimserver von Altprozessen und startet alle 16 Module.
+- Führt System-Checks für 4S-APIs, Singularity (SF4), Corporation (SF3), 
+  Bladeburner und Stanek durch und meldet Offline-APIs im Terminal.
 
-3.2 /lib/profile.js (Zentrales Phasen- & Budget-Modell)[cite: 1]
-- Steuert die globale Spielphase (`EARLY`, `MID`, `LATE`, `ENDGAME`)[cite: 1].
-- Sicherheitsreserve (`safetyReserve`):
-  - EARLY: $0 (volles Investment in Infrastruktur)[cite: 1].
-  - MID: $50e6 ($50 Mio. Puffer)[cite: 1].
-  - LATE (Pre-Corp ab $50b): $160e9 ($160 Mrd. Sparpuffer zur Absicherung der Corp-Gründung)[cite: 1].
-  - ENDGAME: $20e9 oder 15% des Gesamtvermögens[cite: 1].
+3.2 /lib/profile.js (Zentrales Phasen- & Konsum-Budget)
+- Steuert die globale Spielphase (`EARLY`, `MID`, `LATE`, `ENDGAME`).
+- Definiert die `safetyReserve` für KONSUM (Server, Upgrades, APIs):
+  - EARLY: $0 (volles Investment in Infrastruktur).
+  - MID: $50e6 ($50 Mio. Puffer).
+  - LATE (Pre-Corp ab $50b): $160e9 ($160 Mrd. Sparpuffer zur Absicherung der Corp-Gründung).
+  - ENDGAME: $20e9 oder 15% des Gesamtvermögens.
 
-3.3 /trading/stock-engine.js (Hybrid-Börsen-Engine)[cite: 2]
-- Auto-Unlocker: Erwirbt automatisch fehlende Börsen-APIs, sobald das Budget oberhalb 
-  der Reserve reicht:
-  1. WSE Account ($200 Mio.)
-  2. TIX API ($5 Mrd.)
-  3. 4S Market Data ($1 Mrd.)
-  4. 4S TIX API ($25 Mrd.)
-- Hybrid-Analyse: Besitzt du noch keine 4S-TIX-API, speichert das Skript die Kurse der 
-  letzten 40 Ticks (~4 Min.) und berechnet Prognosen (`forecast`) und Volatilität selbst. 
-  Bei vorhandener 4S-API schaltet das Skript nahtlos auf die Präzisions-API um.
-- Diamond Hands Exit-Pass: Errechnet bei jeder Position den Reingewinn abzüglich beider 
-  Fixgebühren: `netProfit = (shares * bidPrice) - (shares * avgPrice) - 200.000`. 
-  Verkauft nur bei Trendbruch (`forecast < 0.52`), Stagnation (`volatility < 0.002`) oder 
-  Gewinnmitnahme (`netProfit > $50M` bei `forecast < 0.55`).
-- Wasserfall-Kauf-Pass (Spillover): Sortiert kaufwürdige Aktien (`forecast >= 0.60`, 
-  `volatility >= 0.005`) nach ihrem Momentum-Score. Kauf-Order setzt mindestens $10 Mio. 
-  Volumen voraus (Gebührenschutz). Kauflimit der #1 Aktie wird vollgepumpt; überschüssiges 
-  Geld fließt im selben Tick direkt in #2, #3 usw.
+3.3 /trading/stock-engine.js (Hybrid-Börsen-Engine & Fund-Manager)
+- Das mächtigste Modul im System. Arbeitet mit einem zweigeteilten Budget (`apiBudget` für 
+  teure API-Käufe und `tradingBudget` für maximale Aktien-Investitionen).
+- Auto-Unlocker: Nutzt strikt das `apiBudget` (myMoney - safetyReserve), um WSE, TIX und 
+  4S-APIs nachzukaufen, ohne das Corporation-Sparziel zu verletzen.
+- Hybrid-Analyse: Erstellt bei fehlender 4S-API eine eigene 40-Tick-Kurshistorie zur 
+  Ermittlung von Momentum und Volatilität. Wechselt nahtlos auf die 4S-API, sobald gekauft.
+- Der Corp-Trigger: Berechnet sekündlich `netWorth = myMoney + stockValue`. Übersteigt 
+  dieser Wert im `LATE`-Game 150 Milliarden Credits, wird das GESAMTE Depot sofort in 
+  einer massiven Verkaufs-Schleife liquidiert, um dem `corp-manager` das Bargeld zu übergeben.
+- Diamond Hands (Normales Trading): Hält Positionen durch kleine Täler. Verkauft erst 
+  bei hartem Trendbruch (`forecast < 0.52`), totem Kapital (`volatility < 0.002`) oder 
+  zur massiven Gewinnmitnahme (Netto-Profit > $50M abzüglich 200k Gebühren).
+- Wasserfall-Kauf: Ignoriert die globale Reserve. Nutzt jeden Credit oberhalb von 100 Mio. 
+  für Trades. Investiert mit mindestens $10 Mio. Order-Volumen in die stärkste Aktie und 
+  lässt überschüssiges Kapital in Platz 2 und 3 abfließen (Spillover).
 - Master-Lock Signal: Schreibt bei aktiven Kaufchancen `"STOCK_ACTIVE"` auf Port 2.
 
-3.4 /managers/cloud-manager.js (pserv-Verwaltung)[cite: 2]
-- Verkauft und kauft 25 P-Server neu, um RAM kontinuierlich zu verdoppeln (8 GB bis Max-RAM)[cite: 3].
-- Prüft `ns.peek(2)`: Ist der `"STOCK_ACTIVE"` Lock gesetzt, pausiert der Manager[cite: 3].
-- Budget-Splitting: Nutzt pro Upgrade-Zyklus maximal `(myMoney - safetyReserve) * 0.10`[cite: 3].
+3.4 Infrastruktur-Manager (/managers/cloud-manager.js & home-upgrade-manager.js)
+- Operieren als nachgelagerte Konsumenten.
+- Port-2-Überwachung: Befindet sich `"STOCK_ACTIVE"` auf Port 2, setzen sich diese Skripte 
+  für mehrere Sekunden in den Sleep-Modus. Die Börse hat absoluten Vorrang.
+- 10%-Budget-Splitting: Selbst wenn die Börse ruht, dürfen diese Module pro Aufrüstungs-Tick 
+  maximal 10 % des Geldes ausgeben, das oberhalb der `safetyReserve` liegt. 
 
-3.5 /managers/home-upgrade-manager.js (Home-Upgrades)[cite: 2]
-- Steuert den Ausbau von Home-RAM und CPU-Cores via Singularity API[cite: 4].
-- Prüft `ns.peek(2)` auf Börsen-Vorrang[cite: 4].
-- Budget-Splitting: Beschränkt Investitionen strikt auf 10 % des freien Überschusses[cite: 4].
+3.5 /batching/dispatcher.js (HWGW-Engine)
+- Das Cashflow-Fundament. Läuft völlig abgekoppelt von den Finanzstreitigkeiten.
+- Zielauswahl-Score: Sucht das beste Ziel via `maxMoney / Math.max(minSecurity, 1)`.
+- HWGW Micro-Batching: Teilt RAM in `hack.js`, `weaken.js` und `grow.js` und verlagert 
+  die Ausführung komplett auf P-Server und gekaperte NPCs ("home"-Isolation).
+- Deadlock-Schutz: Leert Port 1 in einer `while`-Schleife und verhindert Buffer-Overflows.
 
-3.6 /batching/dispatcher.js (HWGW-Engine & Deadlock-Fix)[cite: 2]
-- Zielauswahl-Score: Durchsucht das Netz und wählt das Ziel mit der Formel 
-  `Score = maxMoney / Math.max(minSecurity, 1)`.
-- HWGW Micro-Batching: Verteilt `hack.js`, `weaken.js` und `grow.js` Payloads auf gehackte 
-  NPC-Server und gekaufte P-Server[cite: 2, 6].
-- "home"-Isolation: Schließt "home" als ausführenden Host aus, um System-RAM zu schonen.
-- Deadlock-Schutz: Leert Port 1 in einer `while`-Schleife stumm und arbeitet ununterbrochen[cite: 2].
-
-3.7 /managers/corp-manager.js (4000q-Turbo Edition)[cite: 2]
-- Gründet automatisch die Corporation ab 150b Guthaben[cite: 2].
-- Baut Agriculture (Fundament) & Tobacco (Rendite) auf[cite: 2].
-- Steuert Expansion, Smart Supply, Mitarbeiter-Rollen und Produkt-Verkaufszyklen (`v1`, `v2`)[cite: 2].
-- Schüttet ab $1T/Sek Gewinn 50% Dividende an den Spieler aus[cite: 2].
-
-3.8 /managers/hacknet-manager.js (Phasen-optimiert)[cite: 2]
-- Schaltet sich in den Phasen `LATE` und `ENDGAME` automatisch ab, um Kapital für die Corporation zu sichern[cite: 2].
+3.6 /managers/corp-manager.js (4000q-Turbo Edition)
+- Übernimmt die Kontrolle, sobald die Stock-Engine den Corp-Trigger auslöst (150b).
+- Baut Agriculture (Fundament) & Tobacco (Rendite) mit automatischer Expansion auf.
+- Schüttet ab $1T/Sek Gewinn 50% Dividende an den Spieler aus.
 
 
 --------------------------------------------------------------------------------
-4. INTER-PROZESS-KOMMUNIKATION (IPC) & FINANZ-FLUSS
+4. INTER-PROZESS-KOMMUNIKATION (IPC) & TWO-TIER FINANZ-FLUSS
 --------------------------------------------------------------------------------
-```text
-  ┌────────────────────────────────────────────────────────────────────────┐
-  │                        FINANZ-DOKTRIN (profile.js)                     │
-  │                  surplus = myMoney - safetyReserve                     │
-  └───────────────────────────────────┬────────────────────────────────────┘
-                                      │
-     ┌────────────────────────────────┼────────────────────────────────┐
-     │                                │                                │
-     ▼                                ▼                                ▼
+
+  ┌────────────────────────────────────────────────────────────────────────────────┐
+  │                           FINANZ-DOKTRIN (profile.js)                          │
+  │                     Infrastruktur-Schranke = safetyReserve                     │
+  └──────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+        ┌────────────────────────────────┼────────────────────────────────┐
+        │                                │                                │
+        ▼                                ▼                                ▼
 ┌──────────────────────────┐     ┌──────────────┐             ┌──────────────────┐
 │     stock-engine.js      │     │ Port 2 Lock  │             │   dispatcher.js  │
 ├──────────────────────────┤     └──────┬───────┘             ├──────────────────┤
-│ - Auto-Unlock APIs       │            │                     │ - HWGW Batching  │
-│ - 40-Tick Fallback/4S    │            │ (Sperrt bei Trade)  │ - Max-Targeting  │
-│ - Netto-Profit (-200k)   │            ▼                     │ - "home"-Schonung│
-│ - Wasserfall-Kauf (>10M) ├───────►[STOCK_ACTIVE]            │ - Port 1 Cleanup │
-└──────────────────────────┘            │                     └──────────────────┘
+│ 1. API-Kauf nutzt        │            │                     │ - HWGW Batching  │
+│    (myMoney - Reserve)   │            │ (Sperrt bei Trade)  │ - Max-Targeting  │
+│ 2. TRADING nutzt ALLES   │            ▼                     │ - "home"-Schonung│
+│    (myMoney - 100 Mio.)  ├───────►[STOCK_ACTIVE]            │ - Port 1 Cleanup │
+│ 3. CORP-TRIGGER (150b)   │            │                     └──────────────────┘
+│    Liquidiert alles!     │            │
+└──────────────────────────┘            │
                                         │
                       ┌─────────────────┴─────────────────┐
                       ▼                                   ▼
@@ -163,5 +154,23 @@ Zentrale v3.0.1 Design-Prinzipien:
         │     cloud-manager.js      │       │  home-upgrade-manager.js  │
         ├───────────────────────────┤       ├───────────────────────────┤
         │ - Stoppt bei Port-2-Lock  │       │ - Stoppt bei Port-2-Lock  │
-        │ - Max 10% des Surplus     │       │ - Max 10% des Surplus     │
+        │ - Nutzt die harte Reserve │       │ - Nutzt die harte Reserve │
+        │ - Max 10% des Überschusses│       │ - Max 10% des Überschusses│
         └───────────────────────────┘       └───────────────────────────┘
+
+
+--------------------------------------------------------------------------------
+5. BEDIENUNG UND START
+--------------------------------------------------------------------------------
+Das gesamte System wird nach einem Neustart mit einem einzigen Befehl hochgefahren:
+
+    run boot.js
+
+--------------------------------------------------------------------------------
+6. FRESH START / BITNODE-RESET VERHALTEN
+--------------------------------------------------------------------------------
+- Automatische Start-Diagnose: Listet beim Start im Terminal auf, welche APIs fehlen.
+- Dynamischer Fallback: Fehlen WSE/TIX/4S APIs, nutzt die Stock Engine die 40-Tick-Historie 
+  und kauft die Upgrades automatisch nach, sobald die Liquidität da ist.
+- Early-Game Spar-Modus: Die `profile.js` setzt die Reserve auf $0, um schnellen Aufbau zu sichern.
+================================================================================

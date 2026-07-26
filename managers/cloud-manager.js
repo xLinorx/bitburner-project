@@ -11,11 +11,20 @@ export async function main(ns) {
 
     while (true) {
         let profile = getGameProfile(ns);
+
+        // Priority-Lock: Wenn die Börse aktiv gute Trades sieht, pausieren wir den Einkauf
+        if (ns.peek(2) === "STOCK_ACTIVE") {
+            ns.print("[PRIORITY-LOCK] Stock-Engine hat Vorrang. Pausiere P-Server Käufe...");
+            await ns.sleep(3000);
+            continue;
+        }
+
         let currentServers = ns.cloud.getServerNames();
         let myMoney = ns.getServerMoneyAvailable("home");
         
-        // Verfügbares Geld nach Abzug der dynamischen Sicherheitsreserve
-        let spendableMoney = Math.max(0, myMoney - profile.safetyReserve);
+        // BUDGET-SPLITTING: Maximal 10% des Überschusses für Server-Upgrades nutzen
+        let surplus = Math.max(0, myMoney - profile.safetyReserve);
+        let spendableMoney = surplus * 0.10;
 
         // 1. Initialer Einkauf bis zum Limit (25 Server)
         if (currentServers.length < serverLimit) {
@@ -46,7 +55,6 @@ export async function main(ns) {
             }
 
             if (smallestRam >= ramLimit) {
-                // Alle Server haben Max-RAM erreicht
                 await ns.sleep(60000);
                 continue;
             }
@@ -56,7 +64,7 @@ export async function main(ns) {
 
             if (spendableMoney > upgradeCost) {
                 ns.killall(smallestServer);
-                await ns.sleep(100); // RAM-Freigabe erzwingen
+                await ns.sleep(100);
                 
                 let deleteSuccess = ns.cloud.deleteServer(smallestServer);
                 if (!deleteSuccess) {
@@ -64,7 +72,6 @@ export async function main(ns) {
                     continue;
                 }
 
-                // Sauberen Namen generieren
                 let i = 0;
                 while (currentServers.includes("pserv-" + i) || ns.serverExists("pserv-" + i)) {
                     i++;

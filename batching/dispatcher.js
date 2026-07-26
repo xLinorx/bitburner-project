@@ -6,12 +6,11 @@ export async function main(ns) {
     ns.disableLog("ALL");
     ns.disableLog("getServerMoneyAvailable");
     ns.disableLog("sleep");
-    log(ns, "HWGW-Micro-Batching-Engine (v3.0.1 ns.cloud) gestartet. (Deadlock-Schutz aktiv)", "INFO");
+    log(ns, "HWGW-Micro-Batching-Engine gestartet. (Deadlock-Schutz aktiv)", "INFO");
 
     while (true) {
         let profile = getGameProfile(ns);
 
-        // Den Port stumm leeren, damit er nicht überläuft.
         while (ns.readPort(1) !== "NULL PORT DATA") {
             // Port-Daten bereinigen
         }

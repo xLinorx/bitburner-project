@@ -1,14 +1,37 @@
+---
+layout:
+  width: default
+  title:
+    visible: true
+  description:
+    visible: true
+  tableOfContents:
+    visible: false
+  outline:
+    visible: false
+  pagination:
+    visible: true
+  metadata:
+    visible: false
+  tags:
+    visible: true
+  actions:
+    visible: false
+---
+
 # Änderungen
 
 ## 2026-07-26
 
 ### Dispatcher: vollständige Netzwerk-Infiltration und Verteilung
-- Der Dispatcher scannt den erreichbaren Netzwerkgraphen vollständig ab.
-- Für jeden erreichbaren Server wird geprüft, ob Root-Rechte vorhanden sind. Wenn nicht, werden die verfügbaren Port-Programme genutzt und anschließend `ns.nuke(server)` ausgeführt, sofern die Voraussetzungen erfüllt sind.
-- Der beste Zielserver wird über den gesamten erreichbaren, infiltrierten Serverraum bestimmt.
-- Die Batch-Skripte werden auf allen infiltrierbaren Hosts verteilt, sofern ausreichend RAM vorhanden ist.
+
+* Der Dispatcher scannt den erreichbaren Netzwerkgraphen vollständig ab.
+* Für jeden erreichbaren Server wird geprüft, ob Root-Rechte vorhanden sind. Wenn nicht, werden die verfügbaren Port-Programme genutzt und anschließend `ns.nuke(server)` ausgeführt, sofern die Voraussetzungen erfüllt sind.
+* Der beste Zielserver wird über den gesamten erreichbaren, infiltrierten Serverraum bestimmt.
+* Die Batch-Skripte werden auf allen infiltrierbaren Hosts verteilt, sofern ausreichend RAM vorhanden ist.
 
 ### Relevanter Code im Dispatcher
+
 ```js
 let reachableServers = getReachableServers(ns);
 for (let server of reachableServers) {

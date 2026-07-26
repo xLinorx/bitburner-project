@@ -1,5 +1,5 @@
-import { log } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/logger.js";
-import { getGameProfile } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/profile.js";
+import { log } from "/lib/logger.js";
+import { getGameProfile } from "/lib/profile.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
@@ -35,22 +35,22 @@ export async function main(ns) {
     ns.tprint("   - Starte 16 Kernmodule & TUI-Dashboard im Takt...");
 
     const services = [
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/cloud-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/nuke-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/darkweb-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/hacknet-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/contract-solver.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/task-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/corp-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/gang-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/ascension-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/bladeburner-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/staneks-optimizer.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/home-upgrade-manager.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/managers/favor-optimizer.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/trading/stock-engine.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/dispatcher.js",
-        "D:/Development/Bitburner/AUTOMATION/AUTOMATION/ui/dashboard.js"
+        "/managers/cloud-manager.js",
+        "/managers/nuke-manager.js",
+        "/managers/darkweb-manager.js",
+        "/managers/hacknet-manager.js",
+        "/managers/contract-solver.js",
+        "/managers/task-manager.js",
+        "/managers/corp-manager.js",
+        "/managers/gang-manager.js",
+        "/managers/ascension-manager.js",
+        "/managers/bladeburner-manager.js",
+        "/managers/staneks-optimizer.js",
+        "/managers/home-upgrade-manager.js",
+        "/managers/favor-optimizer.js",
+        "/trading/stock-engine.js",
+        "/batching/dispatcher.js",
+        "/ui/dashboard.js"
     ];
 
     let startedCount = 0;

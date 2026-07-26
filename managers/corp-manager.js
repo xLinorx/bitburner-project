@@ -1,5 +1,5 @@
-import { log } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/logger.js";
-import { getGameProfile } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/profile.js";
+import { log } from "/lib/logger.js";
+import { getGameProfile } from "/lib/profile.js";
 
 const CITIES = ["Sector-12", "Aevum", "Volhaven", "Chongqing", "New Tokyo", "Ishima"];
 

@@ -1,4 +1,4 @@
-import { log } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/logger.js";
+import { log } from "/lib/logger.js";
 
 /*TODO: Implement file creation and management for contract solving statistics based on this function in the dashboard.js 
  // 4. Solver-Statistiken aus optionaler Log-Datei einlesen (falls vom Solver geschrieben)

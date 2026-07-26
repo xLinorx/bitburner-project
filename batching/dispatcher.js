@@ -1,5 +1,5 @@
-import { log } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/logger.js";
-import { getGameProfile } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/profile.js";
+import { log } from "/lib/logger.js";
+import { getGameProfile } from "/lib/profile.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
@@ -51,14 +51,14 @@ export async function main(ns) {
             if (freeRam < 10) continue;
 
             ns.scp([
-                "D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/hack.js",
-                "D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/grow.js",
-                "D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/weaken.js"
+                "/batching/hack.js",
+                "/batching/grow.js",
+                "/batching/weaken.js"
             ], srv, "home");
 
-            let hRam = ns.getScriptRam("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/hack.js");
-            let gRam = ns.getScriptRam("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/grow.js");
-            let wRam = ns.getScriptRam("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/weaken.js");
+            let hRam = ns.getScriptRam("/batching/hack.js");
+            let gRam = ns.getScriptRam("/batching/grow.js");
+            let wRam = ns.getScriptRam("/batching/weaken.js");
 
             let weights = profile.threadWeights;
             let hThreads = Math.floor((freeRam * weights.h) / hRam);
@@ -66,10 +66,10 @@ export async function main(ns) {
             let gThreads = Math.floor((freeRam * weights.g) / gRam);
             let w2Threads = Math.floor((freeRam * weights.w2) / wRam);
 
-            if (hThreads > 0) ns.exec("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/hack.js", srv, hThreads, target, hDelay);
-            if (w1Threads > 0) ns.exec("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/weaken.js", srv, w1Threads, target, w1Delay);
-            if (gThreads > 0) ns.exec("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/grow.js", srv, gThreads, target, gDelay);
-            if (w2Threads > 0) ns.exec("D:/Development/Bitburner/AUTOMATION/AUTOMATION/batching/weaken.js", srv, w2Threads, target, w2Delay);
+            if (hThreads > 0) ns.exec("/batching/hack.js", srv, hThreads, target, hDelay);
+            if (w1Threads > 0) ns.exec("/batching/weaken.js", srv, w1Threads, target, w1Delay);
+            if (gThreads > 0) ns.exec("/batching/grow.js", srv, gThreads, target, gDelay);
+            if (w2Threads > 0) ns.exec("/batching/weaken.js", srv, w2Threads, target, w2Delay);
         }
 
         let sleepTime = Math.min(weakenTime + 500, 15000);

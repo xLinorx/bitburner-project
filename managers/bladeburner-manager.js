@@ -1,4 +1,4 @@
-import { log } from "D:/Development/Bitburner/AUTOMATION/AUTOMATION/lib/logger.js";
+import { log } from "/lib/logger.js";
 
 /** @param {NS} ns */
 export async function main(ns) {

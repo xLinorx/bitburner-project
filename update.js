@@ -13,6 +13,7 @@ export async function main(ns) {
 
   const files = [
     "boot.js",
+    "install.js",
     "helpers.js",
     "scan.js",
     "batching/dispatcher.js",
@@ -64,4 +65,9 @@ export async function main(ns) {
   if (failed > 0) {
     ns.tprint("Überprüfe die Branch- bzw. Dateipfade und führe den Befehl erneut aus.");
   }
+
+  ns.tprint("Starting boot.js to initialize the project...");
+  ns.sleep(500);
+  ns.run("boot.js");
+
 }

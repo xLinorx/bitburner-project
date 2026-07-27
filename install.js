@@ -42,6 +42,6 @@ export async function main(ns) {
   }
 
   ns.tprint(`Download finished. Starting update.js...`);
-  ns.sleep(1000);
-  ns.run("update.js", 1, branch);
+  await ns.sleep(1000);
+  await ns.run("update.js", 1, branch);
 }

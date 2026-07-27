@@ -10,10 +10,17 @@ export async function main(ns) {
     const priceHistory = {};
 
     while (true) {
-        await ns.stock.nextUpdate();
-
         if (!ns.stock.hasWseAccount() || !ns.stock.hasTixApiAccess()) {
             ns.print("Warten auf WSE-Konto und TIX-API-Zugang...");
+            await ns.sleep(10000);
+            continue;
+        }
+
+        try {
+            await ns.stock.nextUpdate();
+        } catch (e) {
+            ns.print("Fehler beim Warten auf Aktien-Update: " + e);
+            await ns.sleep(6000);
             continue;
         }
 

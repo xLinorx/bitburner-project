@@ -41,7 +41,8 @@ export async function main(ns) {
     "startingatzero/early-hack.js",
     "startingatzero/singularity-helper.js",
     "startingatzero/manager.js",
-    "startingatzero/early-stock.js"
+    "startingatzero/early-stock.js",
+    "startingatzero/dashboard.js"
   ];
 
   ns.tprint(`Updating project files from ${repo}@${branch}...`);

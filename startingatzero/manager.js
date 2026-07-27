@@ -149,6 +149,16 @@ export async function main(ns) {
             }
         }
 
+        // 6c. EARLY DASHBOARD STARTEN (ab 16GB Home-RAM und 2.4GB freiem RAM)
+        if (ns.fileExists("/startingatzero/dashboard.js", "home")) {
+            if (!ns.isRunning("/startingatzero/dashboard.js", "home")) {
+                if (homeMaxRam >= 16 && freeRam >= 2.4) {
+                    ns.exec("/startingatzero/dashboard.js", "home", 1);
+                    freeRam -= 2.4;
+                }
+            }
+        }
+
         // 7. DIAGNOSE FÜR DAS HAUPTSYSTEM (boot.js)
         if (homeMaxRam >= 64) {
             ns.print("==================================================");

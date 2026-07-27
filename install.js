@@ -2,7 +2,7 @@
 export async function main(ns) {
   const repo = "xLinorx/github-project";
   const rawArg = ns.args[0] && ns.args[0].toString().trim().toLowerCase();
-  const validBranches = ["dev", "devr", "main"];
+  const validBranches = ["dev", "devr", "main", "experimental"];
   const branch = validBranches.includes(rawArg) ? rawArg : "main";
 
   if (rawArg && rawArg !== branch) {

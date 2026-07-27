@@ -1,4 +1,4 @@
-import { getConfiguration, formatRam, formatMoney, formatNumber } from './helpers.js'
+import { getConfiguration, formatRam, formatMoney, formatNumber } from '/lib/helpers.js'
 
 const argsSchema = [
     ['hide-stats', false], // Set to false to hide detailed server statistics (RAM, max money, etc...)

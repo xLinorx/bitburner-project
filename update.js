@@ -14,12 +14,12 @@ export async function main(ns) {
   const files = [
     "boot.js",
     "install.js",
-    "helpers.js",
     "scan.js",
     "batching/dispatcher.js",
     "batching/hack.js",
     "batching/grow.js",
     "batching/weaken.js",
+    "lib/helpers.js",
     "lib/logger.js",
     "lib/profile.js",
     "managers/ascension-manager.js",

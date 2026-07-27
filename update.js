@@ -37,7 +37,11 @@ export async function main(ns) {
     "managers/staneks-optimizer.js",
     "managers/task-manager.js",
     "trading/stock-engine.js",
-    "ui/dashboard.js"
+    "ui/dashboard.js",
+    "startingatzero/early-hack.js",
+    "startingatzero/singularity-helper.js",
+    "startingatzero/manager.js",
+    "startingatzero/early-stock.js"
   ];
 
   ns.tprint(`Updating project files from ${repo}@${branch}...`);

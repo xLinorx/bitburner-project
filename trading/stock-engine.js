@@ -23,13 +23,13 @@ export async function main(ns) {
             // 1. AUTO-UNLOCK DER BÖRSEN-APIs (Sicherheits-Bereinigt)
             // ==========================================
             // A. WSE Account (200 Mio)
-            if (!ns.stock.hasWSEAccount() && spendableMoney > 200_000_000) {
+            if (!ns.stock.hasWseAccount() && spendableMoney > 200_000_000) {
                 if (ns.stock.purchaseWseAccount()) {
                     log(ns, "WSE Account erworben!", "SUCCESS");
                 }
             }
             // B. TIX API (5 Mrd)
-            if (ns.stock.hasWSEAccount() && !ns.stock.hasTixApiAccess() && spendableMoney > 5_000_000_000) {
+            if (ns.stock.hasWseAccount() && !ns.stock.hasTixApiAccess() && spendableMoney > 5_000_000_000) {
                 if (ns.stock.purchaseTixApi()) {
                     log(ns, "TIX API erworben! Aktiviere Basis-Trading.", "SUCCESS");
                 }
@@ -48,7 +48,7 @@ export async function main(ns) {
             }
 
             // Schutz: Ohne WSE Account stürzt getSymbols() ab. Ohne TIX können wir nicht handeln.
-            if (!ns.stock.hasWSEAccount() || !ns.stock.hasTixApiAccess()) {
+            if (!ns.stock.hasWseAccount() || !ns.stock.hasTixApiAccess()) {
                 continue;
             }
 
@@ -159,7 +159,7 @@ export async function main(ns) {
             }
 
         } catch (e) {
-            // Lautloser Fail bei kritischen API-Änderungen, bis der nächste 6-Sekunden-Tick anläuft
+            log(ns, "FEHLER in stock-engine: " + (e.stack || e), "ERROR");
         }
     }
 }

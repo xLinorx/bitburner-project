@@ -16,7 +16,7 @@ import { log } from "/lib/logger.js";
 export async function main(ns) {
     ns.disableLog("ALL");
     log(ns, "Master-Contract-Solver (Production Ready) aktiv.", "INFO");
-    const STATS_PATH = "D:/Development/Bitburner/AUTOMATION/AUTOMATION/data/contract-stats.json";
+    const STATS_PATH = "/data/contract-stats.json";
 
     // Ensure stats file exists on startup
     await ensureStatsFile(ns, STATS_PATH);

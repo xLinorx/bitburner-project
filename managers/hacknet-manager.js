@@ -6,10 +6,10 @@ export async function main(ns) {
     ns.disableLog("ALL");
     log(ns, "Hacknet-Manager 2.0 (Phasen-optimiert) aktiv...", "INFO");
 
-    const maxNodes = 25; 
-    const maxLevel = 200;
-    const maxRam = 64;
-    const maxCores = 16;
+    const maxNodes = 10; // Maximalanzahl an Hacknet-Knoten. Ursprünglicher Wert: 25.
+    const maxLevel = 25; // Maximallevel für Hacknet-Knoten. Ursprünglicher Wert: 200, aber Kosten/Nutzen Verhältnis ist im Endgame nicht mehr gegeben.
+    const maxRam = 32; // Maximal-RAM für Hacknet-Knoten. Ursprünglicher Wert: 64.
+    const maxCores = 8; // Maximalanzahl an Kernen für Hacknet-Knoten. Ursprünglicher Wert: 16.
 
     while (true) {
         let profile = getGameProfile(ns);

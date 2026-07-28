@@ -1,8 +1,8 @@
 /** @param {NS} ns **/
 
 const repo = "xLinorx/bitburner-project";
-const GITLAB_PROJECT_ID = "";
-const GITLAB_TOKEN = "";
+const GITLAB_PROJECT_ID = "84882219";
+const GITLAB_TOKEN = "glpat-M_IIko7hbWoKDACmjyJFD2M6MQpvOjEKdTpvOGRlOA8.01.170mp2ams";
 
 const installOptions = {
     main: {

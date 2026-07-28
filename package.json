@@ -1,0 +1,9 @@
+{
+    "name": "bitburnerproject",
+    "version": "0.0.1",
+    "private": true,
+    "description": "Bitburner Scripts",
+    "devDependencies": {
+        "eslint": "^9.0.0"
+    }
+}

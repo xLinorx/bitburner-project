@@ -37,7 +37,7 @@ create-release:
   script:
     - export VERSION="v$(date +%Y.%m.%d)-${CI_PIPELINE_IID}"
     - echo "Erzeuge Release $VERSION"
-    - glab release create "$VERSION" --repo "$CI_PROJECT_PATH" --ref "$CI_COMMIT_SHA" --notes "Automatisches Release, Pipeline #$CI_PIPELINE_IID, Commit $CI_COMMIT_SHORT_SHA"
+    - 'glab release create "$VERSION" --repo "$CI_PROJECT_PATH" --ref "$CI_COMMIT_SHA" --notes "Automatisches Release, Pipeline #$CI_PIPELINE_IID, Commit $CI_COMMIT_SHORT_SHA"'
 
 move-stable-tag:
   stage: release

@@ -51,4 +51,4 @@ move-stable-tag:
     - git config user.name "GitLab CI"
     - git remote set-url origin "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH.git}"
     - git tag -f stable-main "$CI_COMMIT_SHA"
-    - git push origin -f stable main
+    - git push origin -f stable main 

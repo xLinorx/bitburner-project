@@ -45,7 +45,7 @@ move-stable-tag:
   image: alpine/git
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      when: on success
+      when: on_success
   script:
     - git config user.email "ci@gitlab.local"
     - git config user.name "GitLab CI"

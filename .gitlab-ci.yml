@@ -29,20 +29,15 @@ lint:
 create-release:
   stage: release
   image: registry.gitlab.com/gitlab-org/cli:latest
+  variables:
+    GLAB_ENABLE_CI_AUTOLOGIN: "true"
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       when: on_success
   script:
     - export VERSION="v$(date +%Y.%m.%d)-${CI_PIPELINE_IID}"
-    - echo "VERSION=$VERSION" >> release.env
     - echo "Erzeuge Release $VERSION"
-  artifacts:
-    reports:
-      dotenv: release.env
-  release:
-    tag_name: "$VERSION"
-    description: "Automatisches Release, Pipeline #$CI_PIPELINE_IID, Commit $CI_COMMIT_SHORT_SHA"
-    ref: "$CI_COMMIT_SHA"
+    - glab release create "$VERSION" --repo "$CI_PROJECT_PATH" --ref "$CI_COMMIT_SHA" --notes "Automatisches Release, Pipeline #$CI_PIPELINE_IID, Commit $CI_COMMIT_SHORT_SHA"
 
 move-stable-tag:
   stage: release

@@ -1,9 +1,10 @@
 /** @param {NS} ns **/
 
-const REPO = "xLinorx/github-project";
+// ── Zentrale Konfiguration ──────────────────────────────
+const REPO = "xLinorx/github-project"; // GitHub, bei GitLab-Branches ungenutzt
 
-const GITLAB_PROJECT_ID = "";
-const GITLAB_TOKEN = "";
+const GITLAB_PROJECT_ID = "";   // eintragen bei GitLab-Umstellung
+const GITLAB_TOKEN = "";        // read_repository-Token
 
 const installOptions = {
     main: { branch: "main", provider: "github" },
@@ -12,6 +13,9 @@ const installOptions = {
     light: { branch: "lightversion", provider: "github" }
 };
 
+const FIXED_BRANCHES = ["main", "mainDev", "experimental", "lightversion"];
+
+// ── Provider-spezifische Funktionen ─────────────────────
 async function fetchTree(ns, cfg) {
     const tmp = "tree_temp.txt";
     let url;
@@ -48,27 +52,71 @@ function buildRawUrl(cfg, path) {
     }
 }
 
+// ── Feature-Branches auflisten (nur GitLab) ─────────────
+async function listFeatureBranches(ns) {
+    if (!GITLAB_PROJECT_ID) {
+        ns.tprint("Feature-Branch-Auswahl benötigt GitLab (GITLAB_PROJECT_ID nicht gesetzt).");
+        return [];
+    }
+
+    const tmp = "branches_temp.txt";
+    const url = `https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/repository/branches?per_page=100&private_token=${GITLAB_TOKEN}`;
+
+    const ok = await ns.wget(url, tmp);
+    if (!ok) return [];
+
+    const data = JSON.parse(ns.read(tmp));
+    ns.rm(tmp);
+
+    return data
+        .map(b => b.name)
+        .filter(name => !FIXED_BRANCHES.includes(name));
+}
+
+// ── Hauptlogik ───────────────────────────────────────────
 export async function main(ns) {
-    const choices = Object.keys(installOptions);
+    const baseChoices = Object.keys(installOptions);
     const forceReinstall = ns.args.includes("--force");
 
-    const silent = ns.args.length > 0 && choices.includes(ns.args[0]);
+    const silent = ns.args.length > 0 && baseChoices.includes(ns.args[0]);
     let selectedOption;
+    let cfg;
 
     if (silent) {
         selectedOption = ns.args[0];
+        cfg = installOptions[selectedOption];
     } else {
+        const menuChoices = [...baseChoices, "feature"];
         const installD = await ns.prompt("Welche Auswahl möchtest du installieren?", {
             type: "select",
-            choices,
+            choices: menuChoices,
         });
-        selectedOption = installD && choices.includes(installD) ? installD : "main";
-        if (selectedOption !== installD) {
-            ns.tprint(`Ungültige Auswahl. Standardmäßig wird "main" installiert.`);
+
+        if (installD === "feature") {
+            const branches = await listFeatureBranches(ns);
+            if (branches.length === 0) {
+                ns.tprint("Keine Feature-Branches gefunden (oder GitLab nicht konfiguriert). Abbruch.");
+                return;
+            }
+            const chosenBranch = await ns.prompt("Welchen Feature-Branch testen?", {
+                type: "select",
+                choices: branches
+            });
+            if (!chosenBranch) {
+                ns.tprint("Keine Auswahl getroffen. Abbruch.");
+                return;
+            }
+            selectedOption = `feature-${chosenBranch}`;
+            cfg = { branch: chosenBranch, provider: "gitlab" };
+        } else {
+            selectedOption = installD && baseChoices.includes(installD) ? installD : "main";
+            if (selectedOption !== installD) {
+                ns.tprint(`Ungültige Auswahl. Standardmäßig wird "main" installiert.`);
+            }
+            cfg = installOptions[selectedOption];
         }
     }
 
-    const cfg = installOptions[selectedOption];
     ns.tprint(`Prüfe Dateien von ${cfg.provider === "github" ? REPO : "bitburnerproject"}@${cfg.branch} (${cfg.provider})...`);
 
     const tree = await fetchTree(ns, cfg);

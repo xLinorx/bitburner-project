@@ -28,7 +28,7 @@ lint:
 
 create-release:
   stage: release
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  image: registry.gitlab.com/gitlab-org/cli:latest
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       when: on_success
@@ -55,6 +55,6 @@ move-stable-tag:
   script:
     - git config user.email "ci@gitlab.local"
     - git config user.name "GitLab CI"
-    - git remote set-url origin "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git remote set-url origin "https://gitlab-ci-token:${GIT_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
     - git tag -f stable-main "$CI_COMMIT_SHA"
     - git push origin -f stable-main

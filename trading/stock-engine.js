@@ -4,14 +4,12 @@ import { getGameProfile } from "/lib/profile.js";
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    log(ns, "DYNAMIC FEE STOCK ENGINE (v3.0.1) aktiv...", "SUCCESS");
+    log(ns, "DIAMOND HANDS STOCK ENGINE (v3.0.1 / 50-50 Split) aktiv...", "SUCCESS");
 
     const priceHistory = {};
     const HISTORY_LENGTH = 40;
     const CORP_COST = 150_000_000_000;
     const MAX_PORTFOLIO_PCT = 0.40; 
-    
-    // Fixkosten pro vollendetem Trade (100k rein, 100k raus)
     const FEE_ROUND_TRIP = 200_000; 
 
     while (true) {
@@ -22,7 +20,7 @@ export async function main(ns) {
             let myMoney = ns.getServerMoneyAvailable("home");
             let apiBudget = Math.max(0, myMoney - profile.safetyReserve);
 
-            // --- API UNLOCKS (v3.0.1 Syntax mit kleinem "se"!) ---
+            // --- API UNLOCKS ---
             if (!ns.stock.hasWseAccount() && apiBudget > 200_000_000) ns.stock.purchaseWseAccount();
             if (ns.stock.hasWseAccount() && !ns.stock.hasTixApiAccess() && apiBudget > 5_000_000_000) ns.stock.purchaseTixApi();
             if (ns.stock.hasTixApiAccess() && !ns.stock.has4SData() && apiBudget > 1_000_000_000) ns.stock.purchase4SMarketData();
@@ -82,31 +80,35 @@ export async function main(ns) {
                 return { sym, forecast, volatility, askPrice, bidPrice, maxShares, shares, avgPrice, momentumScore };
             });
 
-            // --- VERKAUFS-LOGIK (Fee-Aware) ---
+            // --- VERKAUFS-LOGIK (Diamond Hands) ---
             for (let data of marketData) {
                 if (data.shares > 0) {
                     let grossValue = data.shares * data.bidPrice;
                     let purchaseCost = data.shares * data.avgPrice;
                     let netProfit = grossValue - purchaseCost - FEE_ROUND_TRIP; 
 
-                    let stopLoss = data.forecast <= 0.50; 
+                    // ENTSCHÄRFT: Verkauft erst als Stop-Loss, wenn ein echter Absturz droht (< 0.45)
+                    let stopLoss = data.forecast < 0.45; 
                     let deadCapital = data.volatility < 0.001;
                     
-                    let profitTake = data.forecast < 0.54 && netProfit > Math.max(FEE_ROUND_TRIP * 5, purchaseCost * 0.01);
+                    // LANGER ATEM: Verkauft erst, wenn der Trend unter 0.50 fällt UND guter Profit da ist
+                    let profitTake = data.forecast < 0.50 && netProfit > Math.max(FEE_ROUND_TRIP * 5, purchaseCost * 0.02);
 
                     if (stopLoss || deadCapital || profitTake) {
                         let soldPrice = ns.stock.sellStock(data.sym, data.shares);
                         if (soldPrice > 0) {
                             let reason = stopLoss ? "STOP-LOSS" : (deadCapital ? "STAGNATION" : "PROFIT");
-                            log(ns, `EXIT [${reason}]: ${data.sym} | Netto: $${ns.formatNumber(netProfit)}`, "WARN");
+                            log(ns, `EXIT [${reason}]: ${data.sym} | Netto: $${ns.format.number(netProfit)}`, "WARN");
                         }
                     }
                 }
             }
 
-            // --- KAUF-LOGIK (50/50 Split & Dynamic Minimum) ---
+            // --- KAUF-LOGIK (50/50 Split & Hold) ---
             myMoney = ns.getServerMoneyAvailable("home");
             
+            // Aktien-Budget ist exakt 50% vom Nettovermögen. 
+            // Was einmal investiert ist, bleibt dort, selbst wenn myMoney sinkt!
             let targetStockValue = netWorth * 0.50;
             let freeBudgetForStocks = targetStockValue - stockValue;
             let tradingBudget = Math.max(0, Math.min(freeBudgetForStocks, myMoney - profile.safetyReserve));
@@ -118,7 +120,6 @@ export async function main(ns) {
             if (candidates.length > 0 && tradingBudget > 1_500_000) ns.writePort(2, "STOCK_ACTIVE");
             else ns.clearPort(2);
 
-            // 1.5 Mio absolute Mindestinvestition (Gebühren decken)
             if (tradingBudget >= 1_500_000) {
                 let maxSpendPerStock = Math.max(1_500_000, tradingBudget * MAX_PORTFOLIO_PCT);
 
@@ -140,7 +141,7 @@ export async function main(ns) {
                             if (purchased > 0) {
                                 ns.writePort(1, "PAUSE_BATCHING");
                                 let feeImpact = ((200_000 / investmentVolume) * 100).toFixed(1);
-                                log(ns, `DYNAMIC BUY: ${best.sym} | Vol: $${ns.formatNumber(investmentVolume)} | Fee-Impact: ${feeImpact}%`, "SUCCESS");
+                                log(ns, `DIAMOND BUY: ${best.sym} | Vol: $${ns.format.number(investmentVolume)} | Fee: ${feeImpact}%`, "SUCCESS");
                                 
                                 tradingBudget -= cost;
                                 myMoney -= cost; 
@@ -151,7 +152,6 @@ export async function main(ns) {
                 }
             }
         } catch (e) {
-            // Fehlerausgabe, damit das Skript nicht mehr "stumm" abstürzt
             ns.print("[CRITICAL ERROR] " + e);
         }
     }

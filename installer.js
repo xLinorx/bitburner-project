@@ -77,11 +77,11 @@ export async function main(ns) {
             branch: "lightversion",
             files: [
                 "boot.js",
-                "/startingatzero/early-hack.js",
-                "/startingatzero/singularity-helper.js",
-                "/startingatzero/manager.js",
-                "/startingatzero/early-stock.js",
-                "/startingatzero/dashboard.js"
+                "startingatzero/early-hack.js",
+                "startingatzero/singularity-helper.js",
+                "startingatzero/manager.js",
+                "startingatzero/early-stock.js",
+                "startingatzero/dashboard.js"
             ]
         }
     };

@@ -1,0 +1,5 @@
+Installer Access Token: glpat-M_IIko7hbWoKDACmjyJFD2M6MQpvOjEKdTpvOGRlOA8.01.170mp2ams
+
+Project ID: 84882219
+
+InstallationURI: https://gitlab.com/api/v4/projects/<projectid>/repository/files/<pfad>/raw?ref=<branch>&private_token=<token>

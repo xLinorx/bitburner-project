@@ -35,7 +35,7 @@ export async function main(ns) {
         },
         dev: {
             repo: "xLinorx/github-project",
-            branch: "dev",
+            branch: "mainDev",
             files: [
                 "boot.js",
                 "install.js",
@@ -62,12 +62,7 @@ export async function main(ns) {
                 "managers/staneks-optimizer.js",
                 "managers/task-manager.js",
                 "trading/stock-engine.js",
-                "ui/dashboard.js",
-                "startingatzero/early-hack.js",
-                "startingatzero/singularity-helper.js",
-                "startingatzero/manager.js",
-                "startingatzero/early-stock.js",
-                "startingatzero/dashboard.js"
+                "ui/dashboard.js"
             ]
         },
         experimental: {

@@ -76,6 +76,7 @@ export async function main(ns) {
             repo: "xLinorx/github-project",
             branch: "lightversion",
             files: [
+                "boot.js",
                 "/startingatzero/early-hack.js",
                 "/startingatzero/singularity-helper.js",
                 "/startingatzero/manager.js",

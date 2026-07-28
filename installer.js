@@ -1,35 +1,23 @@
 /** @param {NS} ns **/
 
-const repo = "xLinorx/bitburner-project";
-const GITLAB_PROJECT_ID = "84882219";
-const GITLAB_TOKEN = "glpat-M_IIko7hbWoKDACmjyJFD2M6MQpvOjEKdTpvOGRlOA8.01.170mp2ams";
+const REPO = "xLinorx/github-project";
+
+const GITLAB_PROJECT_ID = "";
+const GITLAB_TOKEN = "";
 
 const installOptions = {
-    main: {
-        branch: "main",
-        provider: "github",
-    },
-    dev: {
-        branch: "mainDev",
-        provider: "github",
-    },
-    experimental: {
-        branch: "experimental",
-        provider: "github",
-    },
-    light: {
-        branch: "lightversion",
-        provider: "github",
-    }
+    main: { branch: "main", provider: "github" },
+    dev: { branch: "mainDev", provider: "github" },
+    experimental: { branch: "experimental", provider: "github" },
+    light: { branch: "lightversion", provider: "github" }
 };
 
-//Provider Functions
 async function fetchTree(ns, cfg) {
     const tmp = "tree_temp.txt";
     let url;
 
     if (cfg.provider === "github") {
-        url = `https://api.github.com/repos/${repo}/git/trees/${cfg.branch}?recursive=1`;
+        url = `https://api.github.com/repos/${REPO}/git/trees/${cfg.branch}?recursive=1`;
     } else {
         url = `https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/repository/tree?ref=${cfg.branch}&recursive=true&per_page=100&private_token=${GITLAB_TOKEN}`;
     }
@@ -50,12 +38,11 @@ async function fetchTree(ns, cfg) {
             .filter(e => e.type === "blob" && e.path.endsWith(".js"))
             .map(e => ({ path: e.path, id: e.id }));
     }
-
 }
 
 function buildRawUrl(cfg, path) {
     if (cfg.provider === "github") {
-        return `https://raw.githubusercontent.com/${repo}/${cfg.branch}/${path}?ts=${Date.now()}`;
+        return `https://raw.githubusercontent.com/${REPO}/${cfg.branch}/${path}?ts=${Date.now()}`;
     } else {
         return `https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/repository/files/${encodeURIComponent(path)}/raw?ref=${cfg.branch}&private_token=${GITLAB_TOKEN}`;
     }
@@ -63,6 +50,7 @@ function buildRawUrl(cfg, path) {
 
 export async function main(ns) {
     const choices = Object.keys(installOptions);
+    const forceReinstall = ns.args.includes("--force");
 
     const silent = ns.args.length > 0 && choices.includes(ns.args[0]);
     let selectedOption;
@@ -81,7 +69,7 @@ export async function main(ns) {
     }
 
     const cfg = installOptions[selectedOption];
-    ns.tprint(`Prüfe Dateien von ${cfg.provider === "github" ? repo : "bitburnerproject"}@${cfg.branch} (${cfg.provider})...`);
+    ns.tprint(`Prüfe Dateien von ${cfg.provider === "github" ? REPO : "bitburnerproject"}@${cfg.branch} (${cfg.provider})...`);
 
     const tree = await fetchTree(ns, cfg);
     if (!tree) {
@@ -90,6 +78,12 @@ export async function main(ns) {
     }
 
     const stateFile = `repo_state_${selectedOption}.txt`;
+
+    if (forceReinstall && ns.fileExists(stateFile)) {
+        ns.rm(stateFile);
+        ns.tprint("Force-Modus: alte State-Datei gelöscht, alle Dateien werden neu geladen.");
+    }
+
     let oldState = {};
     if (ns.fileExists(stateFile)) {
         try { oldState = JSON.parse(ns.read(stateFile)); } catch { oldState = {}; }
@@ -101,7 +95,8 @@ export async function main(ns) {
     for (const file of tree) {
         newState[file.path] = file.id;
 
-        if (oldState[file.path] === file.id) {
+        const existsLocally = ns.fileExists(file.path, "home");
+        if (oldState[file.path] === file.id && existsLocally) {
             skipped++;
             continue;
         }

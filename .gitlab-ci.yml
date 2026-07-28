@@ -30,7 +30,7 @@ create-release:
   stage: release
   image: registry.gitlab.com/gitlab-org/cli:latest
   variables:
-    GLAB_ENABLE_CI_AUTOLOGIN: "true"
+    GITLAB_TOKEN: $CI_RELEASE_TOKEN
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       when: on_success

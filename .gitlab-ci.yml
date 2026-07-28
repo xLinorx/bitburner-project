@@ -1,0 +1,55 @@
+stages:
+  - check
+  - release
+
+variables:
+  NODE_IMAGE: "node:20-alpine"
+
+syntax-check:
+  stage: check
+  image: $NODE_IMAGE
+  script:
+    - find . -name "*.js" -not -path "./node_modules/*" -exec node --check {} \;
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "mainDev"
+
+lint:
+  stage: check
+  image: $NODE_IMAGE
+  script:
+    - npm install --no-save eslint
+    - npx eslint .
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "mainDev"
+
+create-release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  variables:
+    GITLAB_TOKEN: $CI_RELEASE_TOKEN
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: on_success
+  script:
+    - export VERSION="v$(date +%Y.%m.%d)-${CI_PIPELINE_IID}"
+    - echo "Erzeuge Release $VERSION"
+    - 'glab release create "$VERSION" installer.js --repo "$CI_PROJECT_PATH" --ref "$CI_COMMIT_SHA" --notes "Automatisches Release, Pipeline #$CI_PIPELINE_IID, Commit $CI_COMMIT_SHORT_SHA"'
+
+move-stable-tag:
+  stage: release
+  image:
+    name: alpine/git
+    entrypoint: [""]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: on_success
+  script:
+    - git config user.email "ci@gitlab.local"
+    - git config user.name "GitLab CI"
+    - git remote set-url origin "https://gitlab-ci-token:${GIT_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git tag -f stable-main "$CI_COMMIT_SHA"
+    - git push origin -f stable-main
